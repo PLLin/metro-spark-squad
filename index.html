@@ -360,105 +360,7 @@
               <div class="view-content">
                 <!-- 目前進行中任務卡 -->
                 <div id="active-quest-container">
-                  <div class="content-card border-purple">
-                    <div class="card-title">
-                      <span class="badge-active-quest"><i class="fa-solid fa-clock"></i> 限時任務</span>
-                      <span class="quest-timer" id="quest-timer-text">剩餘 02:14:33</span>
-                    </div>
-
-                    <h3 class="quest-name" id="quest-title-text">雙人週末中山站出遊</h3>
-                    <p class="quest-intro-desc">系統偵測到您與小芸的共同乘車意圖 (AI 信心值 94%)，已為您客製化生成此限時任務：</p>
-                    
-                    <div class="quest-reward-box">
-                      <span class="reward-lbl">任務獎勵</span>
-                      <span class="reward-val" id="quest-reward-value"><i class="fa-solid fa-vault"></i> 注入金庫 +250 <span class="unit">pt</span></span>
-                    </div>
-
-                    <!-- 戰隊協作狀態 -->
-                    <div class="quest-team-status" id="quest-team-status">
-                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-                        <span class="status-title" style="margin-bottom: 0;"><i class="fa-solid fa-people-group"></i> 戰隊隊員狀態：</span>
-                        <a href="javascript:void(0)" id="quest-btn-invite" style="font-size: 0.7rem; color: var(--primary-teal); font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 3px;"><i class="fa-solid fa-user-plus"></i> 邀請戰友加入</a>
-                      </div>
-                      <div class="members-status-grid" id="quest-members-status-grid">
-                        <div class="m-status-item">
-                          <span class="m-dot bg-blue">我</span>
-                          <span class="m-label">已出站 ✓</span>
-                        </div>
-                        <div class="m-status-item">
-                          <span class="m-dot bg-pink">楊</span>
-                          <span class="m-label">已出站 ✓</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- 四步驟進度條 -->
-                    <div class="quest-steps-wrapper">
-                      <!-- 步驟 1 -->
-                      <div class="step-item completed">
-                        <div class="step-icon"><i class="fa-solid fa-check"></i></div>
-                        <div class="step-content">
-                          <strong>步驟 1: 雙人共同出站</strong>
-                          <p>共同搭乘捷運並於中山站出站 (已完成)</p>
-                        </div>
-                      </div>
-                      <!-- 步驟 2 -->
-                      <div class="step-item completed" id="step-shop-section">
-                        <div class="step-icon"><i class="fa-solid fa-check"></i></div>
-                        <div class="step-content" style="width: 100%;">
-                          <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;" id="btn-toggle-shops">
-                            <div>
-                              <strong>步驟 2: 抵達並前往指定合作店家</strong>
-                              <p id="step-2-desc">前往中山商圈合作店家 (已抵達本站)</p>
-                            </div>
-                            <span id="shops-arrow" style="font-size: 0.62rem; color: var(--primary-purple); font-weight: 700; background-color: rgba(106, 27, 154, 0.05); padding: 4px 8px; border-radius: 20px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-chevron-down"></i> 推薦店家</span>
-                          </div>
-                          
-                          <!-- 折疊內容：指定合作店家清單 -->
-                          <div class="cooperative-shops-accordion" id="cooperative-shops-accordion" style="display: none; margin-top: 0.6rem; background-color: #fafafa; border-radius: 8px; padding: 0.6rem; border: 1px solid #e0e0e0; max-height: 200px; overflow-y: auto;">
-                            <!-- 由 JS 根據當前任務目標站動態渲染 -->
-                          </div>
-                        </div>
-                      </div>
-                      <!-- 步驟 3 -->
-                      <div class="step-item current" id="step-upload-section">
-                        <div class="step-icon">3</div>
-                        <div class="step-content">
-                          <strong>步驟 3: 上傳收據或消費拍照</strong>
-                          <p>透過 Gemini 多模態 AI 自動辨識審核</p>
-                          
-                          <!-- 收據上傳模擬按鈕 -->
-                          <div class="upload-box-wrapper mt-3">
-                            <div class="upload-dropzone" id="btn-upload-receipt">
-                              <i class="fa-solid fa-camera"></i>
-                              <span>點擊拍攝或上傳收據照片</span>
-                              <span class="upload-sub">支援 Gemini Vision 智能秒級審核</span>
-                            </div>
-                            <!-- 隱藏的 input 用於選擇檔案 -->
-                            <input type="file" id="file-receipt" accept="image/*" style="display: none;">
-                          </div>
-
-                          <!-- 掃描處理中的動畫特效 -->
-                          <div class="scanning-overlay" id="scanning-overlay" style="display: none;">
-                            <div class="scan-bar"></div>
-                            <div class="spinner-container">
-                              <i class="fa-solid fa-circle-notch fa-spin"></i>
-                              <span>Gemini 視覺模型辨識收據中...</span>
-                              <pre class="ai-console-log" id="ai-log-text">初始化 Vertex AI 服務中...</pre>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <!-- 步驟 4 -->
-                      <div class="step-item" id="step-verify-section">
-                        <div class="step-icon">4</div>
-                        <div class="step-content">
-                          <strong>步驟 4: 自動派發點數</strong>
-                          <p>審核成功後，點數即時匯入金庫帳戶</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <!-- 將由 JS 動態渲染多個任務卡片 -->
                 </div>
 
                 <!-- 暫無進行中任務時顯示的畫面 -->
@@ -482,24 +384,24 @@
                     <div class="quest-recommend-item">
                       <div class="quest-icon bg-orange"><i class="fa-solid fa-map-location-dot"></i></div>
                       <div class="quest-desc">
-                        <div class="name">地下鐵尋寶趣</div>
-                        <div class="loc"><i class="fa-solid fa-location-dot"></i> 台大醫院站 · 限時 2 天</div>
+                        <div class="name">地下鐵尋寶趣 (文創選物)</div>
+                        <div class="loc"><i class="fa-solid fa-location-dot"></i> 台大醫院站 · 文創選物🎨</div>
                       </div>
                       <div class="quest-action">
                         <span class="points">+80 pt</span>
-                        <button class="btn btn-xs btn-purple btn-accept-quest" data-title="地下鐵尋寶趣" data-points="80" data-station="台大醫院">接受</button>
+                        <button class="btn btn-xs btn-purple btn-accept-quest" data-title="地下鐵尋寶趣" data-points="80" data-station="台大醫院" data-category="文創選物🎨">接受</button>
                       </div>
                     </div>
                     <!-- 任務 2 -->
                     <div class="quest-recommend-item">
                       <div class="quest-icon bg-red"><i class="fa-solid fa-utensils"></i></div>
                       <div class="quest-desc">
-                        <div class="name">夜市美食聚點</div>
-                        <div class="loc"><i class="fa-solid fa-location-dot"></i> 行天宮站 · 限時 5 小時</div>
+                        <div class="name">夜市美食聚點 (飲料店)</div>
+                        <div class="loc"><i class="fa-solid fa-location-dot"></i> 行天宮站 · 飲料店🥤</div>
                       </div>
                       <div class="quest-action">
                         <span class="points">+150 pt</span>
-                        <button class="btn btn-xs btn-purple btn-accept-quest" data-title="夜市美食聚點" data-points="150" data-station="行天宮">接受</button>
+                        <button class="btn btn-xs btn-purple btn-accept-quest" data-title="夜市美食聚點" data-points="150" data-station="行天宮" data-category="飲料店🥤">接受</button>
                       </div>
                     </div>
                   </div>

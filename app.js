@@ -11,11 +11,25 @@ const STATE = {
     { name: "陳阿明 (好友)", points: 2350, color: "bg-green", max: 6500 }
   ],
   questActive: true,
-  questStep: 3, // 當前步驟：3 (上傳收據)
+  // 進行中的任務列表，支持多個任務同時進行
+  activeQuests: [
+    {
+      id: "default-quest",
+      title: "雙人週末中山站出遊",
+      station: "中山",
+      category: "咖啡廳☕",
+      reward: 250,
+      step: 3, // 預設步驟：3 (上傳收據)
+      timerSeconds: 8073,
+      riders: ["我", "楊小芸 (伴侶)"],
+      invitees: []
+    }
+  ],
   questTimerSeconds: 8073, // 2小時14分33秒
   simulatedTripUnlocked: false,
   questReward: 250, // 共同任務的基礎點數獎勵
   questStation: "中山", // 預設任務之目標站
+  questCategory: "咖啡廳☕", // 預設任務之指定特約店家類型
 };
 
 // SVG 圓環總長度 2 * pi * r = 2 * 3.14159 * 70 ≈ 439.8
@@ -29,24 +43,11 @@ document.addEventListener("DOMContentLoaded", () => {
   initTimer();
   renderMemberList();
   renderSimCompanions();
+  renderActiveQuests(); // 初始渲染進行中任務卡
   updatePointsUI(false); // 初始更新介面，不播放音效/動畫
 
-  // 步驟 2 摺疊面板展開收合
-  const toggleBtn = document.getElementById("btn-toggle-shops");
-  if (toggleBtn) {
-    toggleBtn.addEventListener("click", () => {
-      const accordion = document.getElementById("cooperative-shops-accordion");
-      const arrow = document.getElementById("shops-arrow");
-      if (accordion.style.display === "none") {
-        accordion.style.display = "block";
-        arrow.innerHTML = `<i class="fa-solid fa-chevron-up"></i> 收合店家`;
-      } else {
-        accordion.style.display = "none";
-        arrow.innerHTML = `<i class="fa-solid fa-chevron-down"></i> 推薦店家`;
-      }
-    });
-  }
-  renderCooperativeShops("中山"); // 預設載入中山站合作店家
+  // 步驟 2 摺疊面板展開收合 (動態卡片內已各自綁定，此處僅預設載入)
+  renderCooperativeShopsForQuest(STATE.activeQuests[0]); 
 
   // 頁籤切換
   window.switchTab = (tabId) => {
@@ -62,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 尋找對應的按鈕
     const targetBtn = Array.from(document.querySelectorAll(".nav-item")).find(btn => 
-      btn.getAttribute("onclick").includes(tabId)
+      btn.getAttribute("onclick") && btn.getAttribute("onclick").includes(tabId)
     );
     if (targetBtn) targetBtn.classList.add("active");
 
@@ -124,15 +125,11 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
         triggerRideSimulation();
-        // 捷運模擬約在 1.5 秒後分析完，自動切換至任務頁，在此 3 秒後自動啟動收據掃描！
-        setTimeout(() => {
-          triggerReceiptSimulation();
-        }, 3200);
       }, 200);
     } else {
       switchTab('quest');
       setTimeout(() => {
-        triggerReceiptSimulation();
+        triggerReceiptSimulation(quest.id);
       }, 300);
     }
   });
@@ -154,15 +151,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 綁定 App 內按鈕
   document.getElementById("btn-trigger-route").addEventListener("click", triggerRideSimulation);
-  document.getElementById("btn-upload-receipt").addEventListener("click", () => {
-    // 模擬觸發檔案上傳或拍照
-    document.getElementById("file-receipt").click();
-  });
-  document.getElementById("file-receipt").addEventListener("change", (e) => {
-    if (e.target.files.length > 0) {
-      triggerReceiptSimulation();
-    }
-  });
 
   // 邀請彈窗
   const inviteBtn = document.getElementById("btn-invite-member");
@@ -171,16 +159,9 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("invite-modal").style.display = "flex";
     });
   }
-  if (document.getElementById("quest-btn-invite")) {
-    document.getElementById("quest-btn-invite").addEventListener("click", () => {
-      document.getElementById("invite-modal").style.display = "flex";
-    });
-  }
   document.getElementById("btn-close-invite").addEventListener("click", closeInviteModal);
   document.getElementById("btn-cancel-invite").addEventListener("click", closeInviteModal);
   document.getElementById("btn-submit-invite").addEventListener("click", submitInvite);
-
-
 
   // 接受任務按鈕
   document.querySelectorAll(".btn-accept-quest").forEach(btn => {
@@ -188,7 +169,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const title = e.currentTarget.getAttribute("data-title");
       const points = e.currentTarget.getAttribute("data-points");
       const station = e.currentTarget.getAttribute("data-station");
-      acceptNewQuest(title, points, station);
+      const category = e.currentTarget.getAttribute("data-category") || "咖啡廳☕";
+      acceptNewQuest(title, points, station, category);
     });
   });
 
@@ -222,127 +204,113 @@ function triggerRideSimulation() {
   const cleanEndSt = endSt.trim().split(" ")[0];
 
   setTimeout(() => {
-    // 檢查是否有進行中的任務，若有，驗證進站目的地是否符合任務目標站
-    if (STATE.questActive && STATE.questStep === 1) {
-      if (cleanEndSt !== STATE.questStation) {
-        showToast("路線不符", `⚠️ 乘車目的地（${cleanEndSt}）與任務目標站（${STATE.questStation}）不符！請重新選擇。`, "gold");
-        updateIsland("⚠️ 路線不符已中止", "active danger");
-        return;
-      }
-    }
-
-    if (riderCount > 1) {
-      // 隊員同行集點 (解鎖任務)
-      const countPrefix = riderCount === 2 ? "雙人" : (riderCount === 3 ? "三人" : "多人");
-      updateIsland(`👥 偵測到${countPrefix}同行意圖 (94%)`, "active purple");
-      showToast("Vertex AI 生成任務", `結合歷史通勤特徵，動態解鎖「${countPrefix}週末${cleanEndSt}站出遊」限時任務！`, "purple");
-      
-      // 啟用任務狀態
-      STATE.questActive = true;
-      STATE.questStep = 3;
-      STATE.questStation = cleanEndSt; // 記錄任務目標站
-      STATE.questTimerSeconds = 7200 + Math.floor(Math.random() * 3600); // 隨機倒數 2.x 小時
-      
-      // 根據實際乘車人數調整點數獎勵
-      STATE.questReward = riderCount === 2 ? 250 : (riderCount === 3 ? 400 : 550);
-      
-      // 重置任務步驟 UI 為出站完成狀態
-      const steps = document.querySelectorAll(".step-item");
-      steps[0].className = "step-item completed";
-      steps[0].querySelector(".step-icon").innerHTML = '<i class="fa-solid fa-check"></i>';
-      steps[0].querySelector(".step-content p").innerText = `共同搭乘捷運並於 ${cleanEndSt} 站出站 (已完成)`;
-      
-      steps[1].className = "step-item completed";
-      steps[1].querySelector(".step-icon").innerHTML = '<i class="fa-solid fa-check"></i>';
-      document.getElementById("step-2-desc").innerText = `前往${cleanEndSt}商圈合作店家 (已抵達本站)`;
-      renderCooperativeShops(cleanEndSt); // 動態渲染終點站商家資訊
-
-      steps[2].className = "step-item current";
-      steps[2].querySelector(".step-icon").innerHTML = "3";
-      
-      steps[3].className = "step-item";
-      steps[3].querySelector(".step-icon").innerHTML = "4";
-      
-      // 更新任務獎勵標記文字
-      const rewardValSpan = document.getElementById("quest-reward-value");
-      if (rewardValSpan) {
-        rewardValSpan.innerHTML = `<i class="fa-solid fa-vault"></i> 注入金庫 +${STATE.questReward} <span class="unit">pt</span>`;
-      }
-      
-      // 更新協作隊員狀態 (搭乘的顯示 已出站 ✓，未搭乘的顯示 未參與)
-      const statusGrid = document.getElementById("quest-members-status-grid");
-      if (statusGrid) {
-        statusGrid.innerHTML = "";
-        STATE.members.forEach((m, idx) => {
-          const initials = m.name.charAt(0);
-          const isRider = riderIndices.includes(idx);
-          const statusText = isRider ? "已出站 ✓" : "未參與";
-          const item = document.createElement("div");
-          item.className = "m-status-item " + (isRider ? "status-completed" : "status-inactive");
-          item.innerHTML = `
-            <span class="m-dot ${m.color}">${initials}</span>
-            <span class="m-label">${statusText}</span>
-          `;
-          statusGrid.appendChild(item);
-        });
-      }
-      
-      // 顯示任務區，隱藏空狀態
-      document.getElementById("active-quest-container").style.display = "block";
-      document.getElementById("no-quest-container").style.display = "none";
-      document.getElementById("quest-count-badge").innerText = "1 個進行中";
-
-      // 任務標題與說明文字更新
-      document.getElementById("quest-title-text").innerText = `${countPrefix}週末${cleanEndSt}站出遊`;
-      document.querySelector(".quest-intro-desc").innerText = `系統偵測到您與隊員的共同乘車意圖 (AI 信心值 94%)，已客製化生成此限時任務：`;
-      
-      // 手機下方導覽列紅點提示
-      document.getElementById("nav-quest-dot").classList.add("active");
-      
-      // 自動切換到任務頁籤，讓使用者方便看
-      setTimeout(() => {
-        switchTab("quest");
-      }, 1000);
-    } else {
-      // 個人通勤
+    // 檢查是否有匹配該目的地站點的進行中任務
+    const matchingQuest = STATE.activeQuests.find(q => q.station === cleanEndSt);
+    if (!matchingQuest) {
+      // 普通個人通勤，發放基礎個人通勤回饋！
       updateIsland("個人通勤 +15 pt", "active success");
       showToast("個人通勤點數發放", `偵測到單人出站，發放基礎回饋 +15 pt。`, "teal");
-      addPoints(15, 0); // 加 15 點給個人(成員0)
+      addPoints(15, 0);
+      return;
     }
+    
+    // 找到尚未出站的任務 (step === 1)
+    const targetQuest = STATE.activeQuests.find(q => q.station === cleanEndSt && q.step === 1);
+    if (!targetQuest) {
+      showToast("重複搭乘", `您已完成該站點 (${cleanEndSt}) 的乘車出站步驟！請直接前往步驟三上傳收據。`, "gold");
+      updateIsland("⚠️ 重複搭乘", "active danger");
+      return;
+    }
+
+    // 只要有對應任務，不論單人或多人皆解鎖該任務的步驟三！
+    const countPrefix = riderCount === 1 ? "個人" : (riderCount === 2 ? "雙人" : (riderCount === 3 ? "三人" : "多人"));
+    updateIsland(`👥 偵測到${countPrefix}同行意圖 (94%)`, "active purple");
+    showToast("Vertex AI 驗證成功", `結合票證軌跡比對，已解鎖「${targetQuest.title}」之特約商家步驟！`, "purple");
+    
+    // 更新任務狀態與點數獎勵
+    targetQuest.step = 3;
+    targetQuest.timerSeconds = 7200 + Math.floor(Math.random() * 3600); // 隨機倒數 2.x 小時
+    
+    // 如果是多人同行，提升獎勵點數！
+    targetQuest.reward = riderCount === 1 ? targetQuest.reward : (riderCount === 2 ? 250 : (riderCount === 3 ? 400 : 550));
+    targetQuest.riders = riderIndices.map(idx => STATE.members[idx].name);
+    
+    // 自動將該更新的任務展開，其它任務收起
+    STATE.activeQuests.forEach(q => {
+      q.isExpanded = (q.id === targetQuest.id);
+    });
+
+    // 重新渲染所有的進行中任務卡
+    renderActiveQuests();
+
+    // 顯示任務大廳導覽列紅點提示
+    const navDot = document.getElementById("nav-quest-dot");
+    if (navDot) navDot.classList.add("active");
+
+    // 自動切換到任務頁籤，讓使用者方便看
+    setTimeout(() => {
+      switchTab("quest");
+    }, 1000);
+
   }, 1500);
 }
 
 /**
  * 模擬上傳收據：Gemini Vision 辨識與金庫點數注入
  */
-function triggerReceiptSimulation() {
-  if (!STATE.questActive || STATE.questStep !== 3) {
-    showToast("提示", "目前沒有進行中或待驗證收據的任務。請先模擬乘車以觸發任務！", "gold");
-    return;
+/**
+ * 模擬上傳收據：Gemini Vision 辨識與金庫點數注入 (支持多任務參數)
+ */
+function triggerReceiptSimulation(questId) {
+  // 如果沒有指定 ID，自動尋找目前第一個在步驟三的任務
+  let targetQuestId = questId;
+  if (!targetQuestId) {
+    const defaultQuest = STATE.activeQuests.find(q => q.step === 3);
+    if (defaultQuest) {
+      targetQuestId = defaultQuest.id;
+    } else {
+      showToast("提示", "目前沒有進行中或待驗證收據的任務。請先模擬乘車以解鎖任務！", "gold");
+      return;
+    }
   }
 
-  // 顯示掃描覆蓋動畫
-  const overlay = document.getElementById("scanning-overlay");
-  const logText = document.getElementById("ai-log-text");
-  overlay.style.display = "flex";
+  const quest = STATE.activeQuests.find(q => q.id === targetQuestId);
+  if (!quest) return;
+
+  // 顯示該卡片底下的掃描覆蓋動畫
+  const overlay = document.getElementById("scanning-overlay-" + quest.id);
+  const logText = document.getElementById("ai-log-text-" + quest.id);
+  if (overlay) overlay.style.display = "flex";
   
   // 模擬 Gemini AI 逐步辨識日誌
-  const rewardVal = STATE.questReward || 250;
+  const cat = quest.category || "咖啡廳☕";
+  let shopKeyword = "角公園咖啡 (特約咖啡廳)";
+  let itemKeyword = "招牌黑糖拿鐵與手工焦糖布丁";
+  
+  if (cat.includes("飲料店")) {
+    shopKeyword = "五桐號 (特約飲料店)";
+    itemKeyword = "特選杏仁凍五桐茶與凍頂烏龍";
+  } else if (cat.includes("文創選物") || cat.includes("文創")) {
+    shopKeyword = "小日子商號 (特約選物店)";
+    itemKeyword = "原創印花布包、手寫手帳選物組";
+  }
+
+  const rewardVal = quest.reward || 250;
   const logs = [
     "[17:10:01] [Vertex AI] 啟動 Gemini 1.5 Flash 多模態視覺模型...",
     "[17:10:02] [Gemini Vision] 載入影像位元流... 辨識為收據發票格式。",
-    "[17:10:02] [Gemini Vision] 掃描文字中：擷取關鍵字「捷捷飲料店」、「中山店」...",
-    "[17:10:03] [Gemini Vision] 偵測到交易金額「$320」、消費項目「雙人蜂蜜檸檬套餐」...",
-    "[17:10:03] [Gemini Vision] 比對消費時間 2026-06-30 16:45，與出站時間 (16:32) 吻合度 99%！",
-    "[17:10:04] [Vertex AI] 任務條件判定：雙人/多協作出站 ＋ 周邊商家消費 ＝ 條件完全滿足！",
+    `[17:10:02] [Gemini Vision] 掃描文字中：擷取關鍵字「${shopKeyword}」、「${quest.station}店」...`,
+    `[17:10:03] [Gemini Vision] 偵測到交易金額「$320」、消費項目「${itemKeyword}」...`,
+    `[17:10:03] [Gemini Vision] 比對消費時間與${quest.station}站出站時間，吻合度 99%！`,
+    `[17:10:04] [Vertex AI] 任務條件判定：同行乘車出站 ＋ 指定「${cat}」特約商家消費 ＝ 條件完全滿足！`,
     `[17:10:04] [系統核發] 發放金庫點數獎勵：+${rewardVal} pt 批准送出。`
   ];
 
   let currentLogIdx = 0;
-  logText.innerText = "";
+  if (logText) logText.innerText = "";
   
   const logInterval = setInterval(() => {
-    if (currentLogIdx < logs.length) {
+    if (logText && currentLogIdx < logs.length) {
       logText.innerText += logs[currentLogIdx] + "\n";
       logText.scrollTop = logText.scrollHeight;
       currentLogIdx++;
@@ -352,40 +320,31 @@ function triggerReceiptSimulation() {
   // 3秒後完成辨識
   setTimeout(() => {
     clearInterval(logInterval);
-    overlay.style.display = "none";
+    if (overlay) overlay.style.display = "none";
     
-    // 標註步驟 3 & 4 為完成
-    const steps = document.querySelectorAll(".step-item");
-    steps[2].className = "step-item completed";
-    steps[2].querySelector(".step-icon").innerHTML = '<i class="fa-solid fa-check"></i>';
-    
-    steps[3].className = "step-item completed";
-    steps[3].querySelector(".step-icon").innerHTML = '<i class="fa-solid fa-check"></i>';
+    // 標註該任務為完成
+    quest.step = 4;
+    renderActiveQuests();
 
     // 動態島顯示成功
     updateIsland(`✓ Gemini 驗證成功！+${rewardVal} pt`, "active success");
     showToast("Gemini 審核通過", `多模態視覺比對成功！任務完成，+${rewardVal} pt 已注入金庫。`, "purple");
 
     // 金庫點數增加
-    addPoints(rewardVal, 0); // 這裡我們讓本人獲得，並更新金庫
-    STATE.questStep = 4;
-    STATE.questActive = false;
-    document.getElementById("quest-count-badge").innerText = "已完成";
+    addPoints(rewardVal, 0); 
 
     // 播放點數飄浮特效
-    const uploadBtn = document.getElementById("btn-upload-receipt");
-    spawnFloatingPoints("+250 pt", uploadBtn);
+    const uploadBtn = document.querySelector(`.btn-upload-receipt[data-id="${quest.id}"]`);
+    if (uploadBtn) spawnFloatingPoints(`+${rewardVal} pt`, uploadBtn);
     
     // 增加一筆入點明細到金庫
-    insertVaultLog("任務完成：雙人中山出遊", "剛剛 · Gemini 視覺審核收據通過", "+250 pt", "positive", "fa-wand-magic-sparkles", "bg-light-purple", "text-purple");
+    insertVaultLog(`任務完成：${quest.title}`, "剛剛 · Gemini 視覺審核收據通過", `+${rewardVal} pt`, "positive", "fa-wand-magic-sparkles", "bg-light-purple", "text-purple");
 
-    // 5秒後將任務大廳清空為無任務狀態
+    // 4秒後將任務從列表中淡出移除
     setTimeout(() => {
-      if (!STATE.questActive) {
-        document.getElementById("active-quest-container").style.display = "none";
-        document.getElementById("no-quest-container").style.display = "flex";
-      }
-    }, 6000);
+      STATE.activeQuests = STATE.activeQuests.filter(q => q.id !== quest.id);
+      renderActiveQuests();
+    }, 4000);
 
   }, 3200);
 }
@@ -610,18 +569,21 @@ function insertVaultLog(title, timeDesc, pointsStr, typeClass, iconClass, bgClas
  * 限時任務計時器
  */
 function initTimer() {
-  const timerText = document.getElementById("quest-timer-text");
-  
   setInterval(() => {
-    if (STATE.questActive && STATE.questTimerSeconds > 0) {
-      STATE.questTimerSeconds--;
-      
-      const hrs = Math.floor(STATE.questTimerSeconds / 3600);
-      const mins = Math.floor((STATE.questTimerSeconds % 3600) / 60);
-      const secs = STATE.questTimerSeconds % 60;
-      
-      const pad = (num) => String(num).padStart(2, "0");
-      timerText.innerText = `剩餘 ${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+    if (STATE.activeQuests) {
+      STATE.activeQuests.forEach(quest => {
+        if (quest.timerSeconds > 0) {
+          quest.timerSeconds--;
+          const timerText = document.getElementById(`quest-timer-text-${quest.id}`);
+          if (timerText) {
+            const hrs = Math.floor(quest.timerSeconds / 3600);
+            const mins = Math.floor((quest.timerSeconds % 3600) / 60);
+            const secs = quest.timerSeconds % 60;
+            const pad = (num) => String(num).padStart(2, "0");
+            timerText.innerText = `剩餘 ${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+          }
+        }
+      });
     }
   }, 1000);
 }
@@ -643,63 +605,48 @@ function updateStatusTime() {
 /**
  * 模擬接受新任務
  */
-function acceptNewQuest(title, points, station) {
+function acceptNewQuest(title, points, station, category = "咖啡廳☕") {
+  // 檢查是否已經有同站點的進行中任務
+  const isDuplicate = STATE.activeQuests.some(q => q.station === station);
+  if (isDuplicate) {
+    showToast("重複任務", `⚠️ 您已經有此站點 (${station}) 的進行中任務，請先完成它！`, "gold");
+    return;
+  }
+
+  // 收合其他所有進行中任務
+  STATE.activeQuests.forEach(q => {
+    q.isExpanded = false;
+  });
+
+  const newQuest = {
+    id: "quest-" + Date.now(),
+    title: title,
+    station: station,
+    category: category,
+    reward: parseInt(points) || 250,
+    step: 1,
+    timerSeconds: 3600 * 3, // 預設 3 小時
+    riders: [],
+    invitees: [],
+    isExpanded: true // 新任務預設展開
+  };
+  STATE.activeQuests.push(newQuest);
+
   showToast("任務接受成功", `限時任務「${title}」已加入您的進行清單！`, "purple");
   updateIsland(`已接受：${title}`, "active purple");
 
-  // 更新任務大廳，初接受時設定為第一步 (搭乘捷運)
-  STATE.questActive = true;
-  STATE.questStep = 1;
-  STATE.questStation = station; // 儲存任務目標捷運站！
-  STATE.questTimerSeconds = 3600 * 3; // 預設 3 小時
-  STATE.questReward = parseInt(points) || 250;
-
-  document.getElementById("active-quest-container").style.display = "block";
-  document.getElementById("no-quest-container").style.display = "none";
-  document.getElementById("quest-count-badge").innerText = "1 個進行中";
-
-  document.getElementById("quest-title-text").innerText = title;
+  renderActiveQuests(); // 重新渲染進行中任務列表
   
-  // 更新任務獎勵標記文字
-  const rewardValSpan = document.getElementById("quest-reward-value");
-  if (rewardValSpan) {
-    rewardValSpan.innerHTML = `<i class="fa-solid fa-vault"></i> 注入金庫 +${STATE.questReward} <span class="unit">pt</span>`;
-  }
-
-  // 重置步驟 UI (第一步為進行中，其它反白/未啟動)
-  const steps = document.querySelectorAll(".step-item");
-  steps[0].className = "step-item current";
-  steps[0].querySelector(".step-icon").innerHTML = "1";
-  steps[0].querySelector(".step-content p").innerText = `共同搭乘捷運並於 ${station} 站出站 (未完成)`;
-  
-  steps[1].className = "step-item";
-  steps[1].querySelector(".step-icon").innerHTML = "2";
-  document.getElementById("step-2-desc").innerText = `前往${station}商圈合作店家 (未抵達本站)`;
-  renderCooperativeShops(station); // 渲染新目標站的店家
-  document.getElementById("cooperative-shops-accordion").style.display = "none"; // 預設收合
-  document.getElementById("shops-arrow").innerHTML = `<i class="fa-solid fa-chevron-down"></i> 推薦店家`;
-
-  steps[2].className = "step-item";
-  steps[2].querySelector(".step-icon").innerHTML = "3";
-  steps[2].querySelector(".step-content p").innerText = "透過 Gemini 多模態 AI 自動辨識審核";
-
-  steps[3].className = "step-item";
-  steps[3].querySelector(".step-icon").innerHTML = "4";
-
-  // 重置隊員狀態為搭乘中 (依據當前金庫所有成員)
-  const statusGrid = document.getElementById("quest-members-status-grid");
-  if (statusGrid) {
-    statusGrid.innerHTML = "";
-    STATE.members.forEach(m => {
-      const initials = m.name.charAt(0);
-      const item = document.createElement("div");
-      item.className = "m-status-item status-riding";
-      item.innerHTML = `
-        <span class="m-dot ${m.color}">${initials}</span>
-        <span class="m-label">搭乘中 ➔</span>
-      `;
-      statusGrid.appendChild(item);
-    });
+  // 觸發模擬乘車動作，將首頁終點站同步設為此任務目標站
+  const endSelector = document.getElementById("sim-end-station");
+  if (endSelector) {
+    // 找出匹配的 option 並選中它
+    for (let i = 0; i < endSelector.options.length; i++) {
+      if (endSelector.options[i].value.includes(station)) {
+        endSelector.selectedIndex = i;
+        break;
+      }
+    }
   }
 
   // 觸發模擬乘車動作，將首頁終點站同步設為此任務目標站
@@ -761,45 +708,33 @@ function submitInvite() {
     // 寫入交易日誌
     insertVaultLog(`${name} 攜點加入金庫 (${relation})`, "剛剛 · 成功連結", `+${newPoints.toLocaleString()} pt`, "positive", "fa-user-plus", "bg-light-gold", "text-gold");
     
-    // 如果有進行中的共同任務，動態更新任務內容與獎勵！
-    if (STATE.questActive && STATE.questStep === 3) {
-      const activeQuestTitle = document.getElementById("quest-title-text");
-      const currentTitle = activeQuestTitle.innerText;
+      // 尋找對應被邀請的任務 ID
+      const targetQuestId = STATE.currentInvitingQuestId || "default-quest";
+      const targetQuest = STATE.activeQuests.find(q => q.id === targetQuestId);
       
-      let newTitle = currentTitle;
-      let newReward = 400;
-      
-      if (currentTitle.startsWith("雙人")) {
-        newTitle = currentTitle.replace("雙人", "三人");
-        newReward = 400;
-      } else if (currentTitle.startsWith("三人")) {
-        newTitle = currentTitle.replace("三人", "四人");
-        newReward = 550;
-      } else {
-        newTitle = "共同" + currentTitle;
-        newReward = 600;
+      if (targetQuest && targetQuest.step === 3) {
+        let newTitle = targetQuest.title;
+        let newReward = 400;
+        
+        if (targetQuest.title.startsWith("雙人")) {
+          newTitle = targetQuest.title.replace("雙人", "三人");
+          newReward = 400;
+        } else if (targetQuest.title.startsWith("三人")) {
+          newTitle = targetQuest.title.replace("三人", "四人");
+          newReward = 550;
+        } else {
+          newTitle = "共同" + targetQuest.title;
+          newReward = 600;
+        }
+        
+        targetQuest.title = newTitle;
+        targetQuest.reward = newReward;
+        targetQuest.invitees.push(name); // 加到邀請名單
+        
+        showToast("任務獎勵提升！", `👥 由於新成員 ${name} 共同參與，任務獎勵提高至 +${newReward} pt！`, "purple");
       }
       
-      // 更新任務標題與全局獎勵點數
-      activeQuestTitle.innerText = newTitle;
-      STATE.questReward = newReward;
-      
-      // 更新任務獎勵卡片上的文字
-      const rewardValSpan = document.getElementById("quest-reward-value");
-      rewardValSpan.innerHTML = `<i class="fa-solid fa-vault"></i> 注入金庫 +${newReward} <span class="unit">pt</span>`;
-      
-      // 動態將好友加進任務協作面板中
-      const statusGrid = document.getElementById("quest-members-status-grid");
-      const newItem = document.createElement("div");
-      newItem.className = "m-status-item status-completed";
-      newItem.innerHTML = `
-        <span class="m-dot ${color}">${initials}</span>
-        <span class="m-label">已出站 ✓</span>
-      `;
-      statusGrid.appendChild(newItem);
-      
-      showToast("任務獎勵提升！", `👥 由於新成員 ${name} 共同參與，任務獎勵提高至 +${newReward} pt！`, "purple");
-    }
+      renderActiveQuests(); // 重新渲染所有的進行中任務卡
   }, 2200);
 }
 
@@ -986,45 +921,26 @@ function resetDemoToInitial() {
   document.getElementById("settlement-modal").style.display = "none";
 
   // 4. 重置任務大廳 UI 狀態為預設的步驟 3 (中山站)
-  const steps = document.querySelectorAll(".step-item");
-  steps[0].className = "step-item completed";
-  steps[0].querySelector(".step-icon").innerHTML = '<i class="fa-solid fa-check"></i>';
-  steps[0].querySelector(".step-content p").innerText = "共同搭乘捷運並於 中山 站出站 (已完成)";
-  
-  steps[1].className = "step-item completed";
-  steps[1].querySelector(".step-icon").innerHTML = '<i class="fa-solid fa-check"></i>';
-  document.getElementById("step-2-desc").innerText = "前往中山商圈合作店家 (已抵達本站)";
-  renderCooperativeShops("中山");
-  document.getElementById("cooperative-shops-accordion").style.display = "none"; // 預設收合
-  document.getElementById("shops-arrow").innerHTML = `<i class="fa-solid fa-chevron-down"></i> 推薦店家`;
-
-  steps[2].className = "step-item current";
-  steps[2].querySelector(".step-icon").innerHTML = "3";
-  steps[2].querySelector(".step-content p").innerText = "透過 Gemini 多模態 AI 自動辨識審核";
-
-  steps[3].className = "step-item";
-  steps[3].querySelector(".step-icon").innerHTML = "4";
+  STATE.activeQuests = [
+    {
+      id: "default-quest",
+      title: "雙人週末中山站出遊",
+      station: "中山",
+      category: "咖啡廳☕",
+      reward: 250,
+      step: 3, // 預設步驟：3 (上傳收據)
+      timerSeconds: 8073,
+      riders: ["我", "楊小芸 (伴侶)"],
+      invitees: []
+    }
+  ];
+  renderActiveQuests();
 
   // 重置首頁輸入值
   document.getElementById("sim-start-station").value = "台北車站";
   document.getElementById("sim-end-station").value = "中山";
 
-  // 5. 重置隊員狀態清單 (我、楊小芸，已完成)
-  const statusGrid = document.getElementById("quest-members-status-grid");
-  if (statusGrid) {
-    statusGrid.innerHTML = `
-      <div class="m-status-item status-completed">
-        <span class="m-dot bg-blue">我</span>
-        <span class="m-label">已出站 ✓</span>
-      </div>
-      <div class="m-status-item status-completed">
-        <span class="m-dot bg-pink">楊</span>
-        <span class="m-label">已出站 ✓</span>
-      </div>
-    `;
-  }
-
-  // 6. 清除任務導覽紅點
+  // 5. 清除任務導覽紅點
   document.getElementById("nav-quest-dot").classList.remove("active");
 
   // 7. 切換到金庫分頁，向使用者展示金庫已重置回 12,480 (83%) 狀態
@@ -1126,46 +1042,300 @@ const COOPERATIVE_SHOPS = {
 };
 
 /**
- * 根據任務目標站動態渲染步驟 2 的特約店家清單
+ * 根據任務目標站動態渲染步驟 2 的特約店家清單（僅顯示任務指定的特定類型）
  */
-function renderCooperativeShops(station) {
-  const accordion = document.getElementById("cooperative-shops-accordion");
+function renderCooperativeShopsForQuest(quest) {
+  const accordion = document.getElementById(`cooperative-shops-accordion-${quest.id}`);
   if (!accordion) return;
   
   // 清理站名（如 "台大醫院站" 統一轉成 "台大醫院"）
-  const cleanStation = station ? station.replace("站", "").trim() : "中山";
+  const cleanStation = quest.station ? quest.station.replace("站", "").trim() : "中山";
   const shopsData = COOPERATIVE_SHOPS[cleanStation];
   
   if (!shopsData) {
     accordion.innerHTML = `<p style="font-size: 0.68rem; color: var(--text-muted); text-align: center; padding: 10px 0;">本站暫無合作店家資訊。</p>`;
     return;
   }
+
+  // 取得本次任務指定的分類名稱 (去除 Emoji 以便比對資料庫的 key，例如 "咖啡廳☕" 轉成 "咖啡廳")
+  const targetCategoryClean = quest.category ? quest.category.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '').trim() : "咖啡廳";
+  
+  // 找出資料庫中匹配的分類 key
+  let matchedKey = null;
+  for (const key of Object.keys(shopsData)) {
+    const cleanKey = key.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '').trim();
+    if (cleanKey === targetCategoryClean) {
+      matchedKey = key;
+      break;
+    }
+  }
+  
+  if (!matchedKey || !shopsData[matchedKey]) {
+    accordion.innerHTML = `<p style="font-size: 0.68rem; color: var(--text-muted); text-align: center; padding: 10px 0;">未找到指定類型的店家資訊。</p>`;
+    return;
+  }
+  
+  const list = shopsData[matchedKey];
+  let html = `
+    <div style="font-size: 0.65rem; font-weight: 800; color: #e91e63; margin-bottom: 0.5rem; background-color: #fce4ec; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; width: 100%; box-sizing: border-box;">
+      🎯 本次任務指定類型：${quest.category}
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px; padding-left: 4px;">
+  `;
+  
+  list.forEach(shop => {
+    html += `
+        <div style="border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 4px; text-align: left;">
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-dark);">${shop.name}</div>
+          <div style="font-size: 0.62rem; color: var(--text-muted); line-height: 1.35; margin-top: 1px;">${shop.desc}</div>
+          <span style="font-size: 0.6rem; color: #e91e63; font-weight: 700; background-color: #fce4ec; padding: 2px 5px; border-radius: 4px; display: inline-block; margin-top: 3px;">🎁 ${shop.promo}</span>
+        </div>
+    `;
+  });
+  
+  html += `</div>`;
+  accordion.innerHTML = html;
+}
+
+/**
+ * 核心：動態渲染所有進行中任務卡
+ */
+function renderActiveQuests() {
+  const container = document.getElementById("active-quest-container");
+  if (!container) return;
+  
+  const count = STATE.activeQuests.length;
+  document.getElementById("quest-count-badge").innerText = `${count} 個進行中`;
+  
+  const noQuestContainer = document.getElementById("no-quest-container");
+  if (count === 0) {
+    container.innerHTML = "";
+    if (noQuestContainer) noQuestContainer.style.display = "flex";
+    return;
+  }
+  
+  if (noQuestContainer) noQuestContainer.style.display = "none";
   
   let html = "";
-  for (const [category, list] of Object.entries(shopsData)) {
-    html += `
-      <div class="shop-category-group" style="margin-bottom: 0.8rem;">
-        <div style="font-size: 0.72rem; font-weight: 800; color: var(--primary-purple); display: flex; align-items: center; gap: 4px; margin-bottom: 0.3rem;">
-          ${category}
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 6px; padding-left: 6px;">
-    `;
+  STATE.activeQuests.forEach(quest => {
+    const hrs = Math.floor(quest.timerSeconds / 3600);
+    const mins = Math.floor((quest.timerSeconds % 3600) / 60);
+    const secs = quest.timerSeconds % 60;
+    const pad = (num) => String(num).padStart(2, "0");
+    const timerStr = `剩餘 ${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
     
-    list.forEach(shop => {
-      html += `
-          <div style="border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 4px; text-align: left;">
-            <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-dark);">${shop.name}</div>
-            <div style="font-size: 0.62rem; color: var(--text-muted); line-height: 1.35; margin-top: 1px;">${shop.desc}</div>
-            <span style="font-size: 0.6rem; color: #e91e63; font-weight: 700; background-color: #fce4ec; padding: 2px 5px; border-radius: 4px; display: inline-block; margin-top: 3px;">🎁 ${shop.promo}</span>
+    // 生成隊員狀態 HTML
+    let membersHtml = "";
+    if (quest.step === 1) {
+      STATE.members.forEach(m => {
+        const initials = m.name.charAt(0);
+        membersHtml += `
+          <div class="m-status-item status-riding">
+            <span class="m-dot ${m.color}">${initials}</span>
+            <span class="m-label">搭乘中 ➔</span>
           </div>
-      `;
-    });
+        `;
+      });
+    } else {
+      STATE.members.forEach(m => {
+        const initials = m.name.charAt(0);
+        const isRider = quest.riders.some(r => r.startsWith(m.name.split(" ")[0]));
+        const statusClass = isRider ? "status-completed" : "status-inactive";
+        const statusText = isRider ? "已出站 ✓" : "未參與";
+        membersHtml += `
+          <div class="m-status-item ${statusClass}">
+            <span class="m-dot ${m.color}">${initials}</span>
+            <span class="m-label">${statusText}</span>
+          </div>
+        `;
+      });
+      quest.invitees.forEach(name => {
+        const initials = name.charAt(0);
+        membersHtml += `
+          <div class="m-status-item status-completed">
+            <span class="m-dot bg-orange">${initials}</span>
+            <span class="m-label">已出站 ✓</span>
+          </div>
+        `;
+      });
+    }
     
+    const step1Class = quest.step >= 3 ? "completed" : "current";
+    const step1Icon = quest.step >= 3 ? '<i class="fa-solid fa-check"></i>' : "1";
+    const step1Desc = quest.step >= 3 ? `共同搭乘捷運並於 ${quest.station} 站出站 (已完成)` : `共同搭乘捷運並於 ${quest.station} 站出站 (未完成)`;
+    
+    const step2Class = quest.step >= 3 ? "completed" : "";
+    const step2Desc = quest.step >= 3 ? `前往${quest.station}商圈「${quest.category}」特約店家 (已抵達本站)` : `前往指定「${quest.category}」類型特約店家消費`;
+    
+    const step3Class = quest.step === 3 ? "current" : (quest.step > 3 ? "completed" : "");
+    const step3Icon = quest.step > 3 ? '<i class="fa-solid fa-check"></i>' : "3";
+    const step3Desc = `請上傳「${quest.category}」特約店家消費收據照片`;
+    
+    const step4Class = quest.step === 4 ? "completed" : "";
+    const step4Icon = quest.step === 4 ? '<i class="fa-solid fa-check"></i>' : "4";
+    
+    const isExpanded = quest.isExpanded !== false;
+    const bodyDisplay = isExpanded ? "block" : "none";
+    const chevronIcon = isExpanded ? "fa-chevron-up" : "fa-chevron-down";
+
     html += `
+      <div class="content-card border-purple" id="card-${quest.id}" style="margin-bottom: 1.2rem; position: relative;">
+        <!-- 任務標頭：點選可展開或折疊卡片 -->
+        <div class="quest-card-header" data-id="${quest.id}" style="cursor: pointer; user-select: none; padding: 0.2rem 0;">
+          <div class="card-title" style="margin-bottom: 0.3rem; display: flex; justify-content: space-between; align-items: center;">
+            <span class="badge-active-quest"><i class="fa-solid fa-clock"></i> 限時任務</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="quest-timer" id="quest-timer-text-${quest.id}">${timerStr}</span>
+              <span style="font-size: 0.72rem; color: var(--text-muted);"><i class="fa-solid ${chevronIcon}"></i></span>
+            </div>
+          </div>
+
+          <h3 class="quest-name" style="font-size: 0.95rem; font-weight: 800; margin: 0.2rem 0; display: flex; justify-content: space-between; align-items: center;">
+            <span>${quest.title}</span>
+            <span style="font-size: 0.72rem; color: var(--primary-purple); font-weight: 700; background-color: rgba(106, 27, 154, 0.05); padding: 2px 6px; border-radius: 4px;">+${quest.reward} pt</span>
+          </h3>
+        </div>
+
+        <!-- 可收合任務主體 -->
+        <div class="quest-card-body" id="body-${quest.id}" style="display: ${bodyDisplay}; margin-top: 0.6rem; border-top: 1px solid var(--border-color); padding-top: 0.6rem;">
+          <p class="quest-intro-desc" style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 0.8rem; line-height: 1.45;">
+            系統偵測票證意圖客製化生成，完成此同行任務以共享眾籌回饋。
+          </p>
+
+          <!-- 戰隊協作狀態 -->
+          <div class="quest-team-status" style="margin-top: 0.8rem; background-color: #fafafa; border-radius: 12px; padding: 0.6rem; border: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <span class="status-title" style="margin-bottom: 0; font-size: 0.72rem; font-weight: 700; color: var(--text-dark);"><i class="fa-solid fa-people-group"></i> 戰隊隊員狀態：</span>
+              ${quest.step >= 3 ? `<a href="javascript:void(0)" class="quest-btn-invite" data-id="${quest.id}" style="font-size: 0.68rem; color: var(--primary-teal); font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 3px;"><i class="fa-solid fa-user-plus"></i> 邀請戰友加入</a>` : ''}
+            </div>
+            <div class="members-status-grid" style="display: flex; flex-wrap: wrap; gap: 6px;">
+              ${membersHtml}
+            </div>
+          </div>
+
+          <!-- 四步驟進度條 -->
+          <div class="quest-steps-wrapper" style="margin-top: 1rem; text-align: left;">
+            <!-- 步驟 1 -->
+            <div class="step-item ${step1Class}">
+              <div class="step-icon">${step1Icon}</div>
+              <div class="step-content">
+                <strong>步驟 1: 共同出站</strong>
+                <p>${step1Desc}</p>
+              </div>
+            </div>
+            
+            <!-- 步驟 2 -->
+            <div class="step-item ${step2Class}" id="step-shop-section-${quest.id}">
+              <div class="step-icon"><i class="fa-solid fa-store"></i></div>
+              <div class="step-content" style="width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;" class="btn-toggle-shops" data-id="${quest.id}">
+                  <div>
+                    <strong>步驟 2: 抵達並前往指定合作店家</strong>
+                    <p id="step-2-desc-${quest.id}">${step2Desc}</p>
+                  </div>
+                  <span id="shops-arrow-${quest.id}" style="font-size: 0.62rem; color: var(--primary-purple); font-weight: 700; background-color: rgba(106, 27, 154, 0.05); padding: 4px 8px; border-radius: 20px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-chevron-down"></i> 推薦店家</span>
+                </div>
+                
+                <div class="cooperative-shops-accordion" id="cooperative-shops-accordion-${quest.id}" style="display: none; margin-top: 0.6rem; background-color: #fafafa; border-radius: 8px; padding: 0.6rem; border: 1px solid #e0e0e0; max-height: 200px; overflow-y: auto;"></div>
+              </div>
+            </div>
+            
+            <!-- 步驟 3 -->
+            <div class="step-item ${step3Class}" id="step-upload-section-${quest.id}">
+              <div class="step-icon">${step3Icon}</div>
+              <div class="step-content">
+                <strong>步驟 3: 上傳收據或消費拍照</strong>
+                <p>${step3Desc}</p>
+                
+                <div class="upload-box-wrapper mt-3">
+                  <div class="upload-dropzone btn-upload-receipt" data-id="${quest.id}">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>點擊拍攝或上傳收據照片</span>
+                    <span class="upload-sub">支援 Gemini Vision 智能秒級審核</span>
+                  </div>
+                  <input type="file" id="file-receipt-${quest.id}" accept="image/*" style="display: none;" class="file-receipt" data-id="${quest.id}">
+                </div>
+
+                <div class="scanning-overlay" id="scanning-overlay-${quest.id}" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.96); z-index: 50; flex-direction: column; align-items: center; justify-content: center; padding: 1.2rem; border-radius: 16px;">
+                  <div class="scan-bar" style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to bottom, transparent, var(--primary-purple)); animation: scanEffect 1.5s infinite linear;"></div>
+                  <div class="spinner-container" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 1.6rem; color: var(--primary-purple);"></i>
+                    <span style="font-size: 0.72rem; font-weight: 700; color: var(--primary-purple); margin-top: 10px;">Gemini Vision 審核中...</span>
+                  </div>
+                  <pre class="ai-console-log" id="ai-log-text-${quest.id}" style="width: 100%; max-height: 140px; overflow-y: auto; background-color: #1e1e1e; color: #a6e22e; font-family: monospace; font-size: 0.58rem; padding: 8px; border-radius: 8px; margin-top: 12px; text-align: left; white-space: pre-wrap; line-height: 1.4; box-sizing: border-box;"></pre>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 步驟 4 -->
+            <div class="step-item ${step4Class}">
+              <div class="step-icon">${step4Icon}</div>
+              <div class="step-content">
+                <strong>步驟 4: 自動派發點數</strong>
+                <p>審核成功後，點數即時匯入金庫帳戶</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     `;
-  }
+  });
   
-  accordion.innerHTML = html;
+  container.innerHTML = html;
+  
+  // 重新綁定事件
+  STATE.activeQuests.forEach(quest => {
+    // 綁定卡片展開/收合
+    const cardHeader = container.querySelector(`.quest-card-header[data-id="${quest.id}"]`);
+    if (cardHeader) {
+      cardHeader.addEventListener("click", () => {
+        const currentlyExpanded = quest.isExpanded !== false;
+        quest.isExpanded = !currentlyExpanded;
+        renderActiveQuests();
+      });
+    }
+
+    const btnToggle = container.querySelector(`.btn-toggle-shops[data-id="${quest.id}"]`);
+    if (btnToggle) {
+      btnToggle.addEventListener("click", (e) => {
+        e.stopPropagation(); // 阻止氣泡傳播，避免點擊裡面按鈕也觸發卡片折疊！
+        const accordion = document.getElementById(`cooperative-shops-accordion-${quest.id}`);
+        const arrow = document.getElementById(`shops-arrow-${quest.id}`);
+        if (accordion.style.display === "none") {
+          accordion.style.display = "block";
+          renderCooperativeShopsForQuest(quest);
+          arrow.innerHTML = `<i class="fa-solid fa-chevron-up"></i> 收合店家`;
+        } else {
+          accordion.style.display = "none";
+          arrow.innerHTML = `<i class="fa-solid fa-chevron-down"></i> 推薦店家`;
+        }
+      });
+    }
+    
+    const btnUpload = container.querySelector(`.btn-upload-receipt[data-id="${quest.id}"]`);
+    const fileInput = container.querySelector(`.file-receipt[data-id="${quest.id}"]`);
+    if (btnUpload && fileInput) {
+      btnUpload.addEventListener("click", (e) => {
+        e.stopPropagation();
+        fileInput.click();
+      });
+    }
+    
+    if (fileInput) {
+      fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) {
+          triggerReceiptSimulation(quest.id);
+        }
+      });
+    }
+    
+    const btnInvite = container.querySelector(`.quest-btn-invite[data-id="${quest.id}"]`);
+    if (btnInvite) {
+      btnInvite.addEventListener("click", (e) => {
+        e.stopPropagation();
+        STATE.currentInvitingQuestId = quest.id;
+        openInviteModal();
+      });
+    }
+  });
 }
