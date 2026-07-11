@@ -403,11 +403,21 @@
                         </div>
                       </div>
                       <!-- 步驟 2 -->
-                      <div class="step-item completed">
+                      <div class="step-item completed" id="step-shop-section">
                         <div class="step-icon"><i class="fa-solid fa-check"></i></div>
-                        <div class="step-content">
-                          <strong>步驟 2: 前往指定合作店家</strong>
-                          <p>前往中山商圈合作店家消費 (已抵達)</p>
+                        <div class="step-content" style="width: 100%;">
+                          <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;" id="btn-toggle-shops">
+                            <div>
+                              <strong>步驟 2: 抵達並前往指定合作店家</strong>
+                              <p id="step-2-desc">前往中山商圈合作店家 (已抵達本站)</p>
+                            </div>
+                            <span id="shops-arrow" style="font-size: 0.62rem; color: var(--primary-purple); font-weight: 700; background-color: rgba(106, 27, 154, 0.05); padding: 4px 8px; border-radius: 20px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-chevron-down"></i> 推薦店家</span>
+                          </div>
+                          
+                          <!-- 折疊內容：指定合作店家清單 -->
+                          <div class="cooperative-shops-accordion" id="cooperative-shops-accordion" style="display: none; margin-top: 0.6rem; background-color: #fafafa; border-radius: 8px; padding: 0.6rem; border: 1px solid #e0e0e0; max-height: 200px; overflow-y: auto;">
+                            <!-- 由 JS 根據當前任務目標站動態渲染 -->
+                          </div>
                         </div>
                       </div>
                       <!-- 步驟 3 -->

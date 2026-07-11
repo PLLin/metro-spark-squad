@@ -31,6 +31,23 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSimCompanions();
   updatePointsUI(false); // 初始更新介面，不播放音效/動畫
 
+  // 步驟 2 摺疊面板展開收合
+  const toggleBtn = document.getElementById("btn-toggle-shops");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      const accordion = document.getElementById("cooperative-shops-accordion");
+      const arrow = document.getElementById("shops-arrow");
+      if (accordion.style.display === "none") {
+        accordion.style.display = "block";
+        arrow.innerHTML = `<i class="fa-solid fa-chevron-up"></i> 收合店家`;
+      } else {
+        accordion.style.display = "none";
+        arrow.innerHTML = `<i class="fa-solid fa-chevron-down"></i> 推薦店家`;
+      }
+    });
+  }
+  renderCooperativeShops("中山"); // 預設載入中山站合作店家
+
   // 頁籤切換
   window.switchTab = (tabId) => {
     document.querySelectorAll(".app-view").forEach(view => {
@@ -237,7 +254,8 @@ function triggerRideSimulation() {
       
       steps[1].className = "step-item completed";
       steps[1].querySelector(".step-icon").innerHTML = '<i class="fa-solid fa-check"></i>';
-      steps[1].querySelector(".step-content p").innerText = `前往${cleanEndSt}商圈合作店家消費 (已抵達)`;
+      document.getElementById("step-2-desc").innerText = `前往${cleanEndSt}商圈合作店家 (已抵達本站)`;
+      renderCooperativeShops(cleanEndSt); // 動態渲染終點站商家資訊
 
       steps[2].className = "step-item current";
       steps[2].querySelector(".step-icon").innerHTML = "3";
@@ -656,7 +674,10 @@ function acceptNewQuest(title, points, station) {
   
   steps[1].className = "step-item";
   steps[1].querySelector(".step-icon").innerHTML = "2";
-  steps[1].querySelector(".step-content p").innerText = `前往${station}商圈合作店家消費 (未抵達)`;
+  document.getElementById("step-2-desc").innerText = `前往${station}商圈合作店家 (未抵達本站)`;
+  renderCooperativeShops(station); // 渲染新目標站的店家
+  document.getElementById("cooperative-shops-accordion").style.display = "none"; // 預設收合
+  document.getElementById("shops-arrow").innerHTML = `<i class="fa-solid fa-chevron-down"></i> 推薦店家`;
 
   steps[2].className = "step-item";
   steps[2].querySelector(".step-icon").innerHTML = "3";
@@ -972,7 +993,10 @@ function resetDemoToInitial() {
   
   steps[1].className = "step-item completed";
   steps[1].querySelector(".step-icon").innerHTML = '<i class="fa-solid fa-check"></i>';
-  steps[1].querySelector(".step-content p").innerText = "前往中山商圈合作店家消費 (已抵達)";
+  document.getElementById("step-2-desc").innerText = "前往中山商圈合作店家 (已抵達本站)";
+  renderCooperativeShops("中山");
+  document.getElementById("cooperative-shops-accordion").style.display = "none"; // 預設收合
+  document.getElementById("shops-arrow").innerHTML = `<i class="fa-solid fa-chevron-down"></i> 推薦店家`;
 
   steps[2].className = "step-item current";
   steps[2].querySelector(".step-icon").innerHTML = "3";
@@ -1008,4 +1032,140 @@ function resetDemoToInitial() {
 
   showToast("重置成功", "✨ 金庫已完成結算，演示環境已重置為初始狀態！", "teal");
   updateIsland("✨ 演示環境已重置", "active success");
+}
+
+/**
+ * 合作店家資料庫 (5 個捷運站，各有 3 個分類，每個分類 3 家特約商店)
+ */
+const COOPERATIVE_SHOPS = {
+  "中山": {
+    "咖啡廳☕": [
+      { name: "角公園咖啡 Triangle Garden", desc: "老屋改建文青風，招牌黑糖拿鐵與手作布丁", promo: "出示票證享 9 折" },
+      { name: "心中山 浮光書店", desc: "結合獨立書店的複合式精品老宅咖啡", promo: "消費贈送捷運點數 10 pt" },
+      { name: "Melting Finger 甜點工坊", desc: "人氣馬卡龍名店，拿鐵配手作彩虹馬卡龍", promo: "滿 $200 現折 $20" }
+    ],
+    "飲料店🥤": [
+      { name: "五桐號 WooTea (中山店)", desc: "招牌杏仁凍五桐茶，濃郁茶香與 Q 彈凍飲", promo: "捷運點數折抵 5 pt/杯" },
+      { name: "SOMA 特調茶飲 (中山概念店)", desc: "網紅評選全台第一名特調歐蕾奶茶", promo: "出示 App 免費加特製茶凍" },
+      { name: "茶敬茶 Tea To Tea", desc: "台灣精品小農契作，在地現泡鮮奶茶專賣", promo: "全品項享 95 折" }
+    ],
+    "文創選物🎨": [
+      { name: "Zakka W 雜貨舖", desc: "日系復古古著、原創插畫與手工飾品選物", promo: "消費即享 9 折並送 20 pt" },
+      { name: "地衣荒物 Earthing Way", desc: "台灣在地手工藝陶瓷器皿與生活美學選物", promo: "消費滿 $500 贈限定小禮" },
+      { name: "0416x1024 創意T恤", desc: "幽默原創插畫手繪 T-shirt 與個性文具周邊", promo: "買兩件享 85 折優惠" }
+    ]
+  },
+  "台大醫院": {
+    "咖啡廳☕": [
+      { name: "NOTCH 咖啡 (城中店)", desc: "英倫復古工業風，平價精品手沖黑咖啡", promo: "憑當日乘車紀錄送手工餅乾" },
+      { name: "La Grotta 義式咖啡", desc: "隱密寧靜的城中巷弄，精緻拿鐵與招牌手工蛋糕", promo: "點低消飲品現折 $15" },
+      { name: "早秋咖啡 Café Macho", desc: "提供深夜手沖、輕食與台灣精釀啤酒的文青愛店", promo: "免收 10% 服務費" }
+    ],
+    "飲料店🥤": [
+      { name: "得正 Oolong Tea Project (重慶店)", desc: "主打春烏龍與烘焙烏龍系列，清香醇厚", promo: "大杯飲品現折 $5" },
+      { name: "八曜和茶 (台北城中店)", desc: "新起日式和風茶飲，主打極上和風奶茶與穀物茶", promo: "捷運點數兩倍回饋" },
+      { name: "叮哥茶飲 (許昌店)", desc: "來自台東的特色茶飲，主打初鹿牧場鮮奶茶", promo: "第二杯半價優惠" }
+    ],
+    "文創選物🎨": [
+      { name: "三民書局 (重慶南路店)", desc: "老字號巨型書局，精選圖書、進口文具與禮品", promo: "圖書與文具享 9 折優惠" },
+      { name: "藝風堂藝術選物", desc: "在地青年藝術家手工精緻器皿、明信片與工藝品", promo: "單筆滿 $1000 享 9 折" },
+      { name: "臺灣博物館文創商店", desc: "融合台灣特有種與歷史文物的特製文創設計產品", promo: "出示乘車票證享門票優惠" }
+    ]
+  },
+  "行天宮": {
+    "咖啡廳☕": [
+      { name: "疍宅 Egghouse", desc: "老宅抹茶戚風蛋糕代表，必點小山園濃抹茶拿鐵", promo: "甜點拿鐵套餐折 $20" },
+      { name: "時常在這裡", desc: "預約制手作限定水果戚風、精品單品黑咖啡", promo: "捷運集點合作特約商店" },
+      { name: "Coppii Lumii living coffee 冉冉生活", desc: "熱門招牌肉桂捲、奶油鬆餅與大盤全日早午餐", promo: "消費滿 $300 贈美式咖啡券" }
+    ],
+    "飲料店🥤": [
+      { name: "約翰紅茶公司 (民生店)", desc: "紅茶專門店，推薦雨果那堤與煮濃紅茶那堤", promo: "出示捷運 App 免費加椰果/珍珠" },
+      { name: "一沐日 (吉林店)", desc: "原創招牌粉粿黑糖奶茶，古早味台式經典手搖", promo: "支援捷運點數全額折抵" },
+      { name: "麻古茶坊 (行天宮店)", desc: "鮮果特調代表，推薦芝芝芒果與招牌楊枝甘露", promo: "自備環保杯享雙倍點數" }
+    ],
+    "文創選物🎨": [
+      { name: "小日子商號 (行天宮店)", desc: "台灣本土設計生活雜誌、文青布包與手寫文具", promo: "消費享 9 折加贈 15 pt" },
+      { name: "問路選物店", desc: "精選台灣小農香氛、天然蠟燭、心靈牌卡與擺飾", promo: "消費滿 $800 送香氛體驗片" },
+      { name: "行天宮文創坊", desc: "現代設計風格防蚊御守、平安香包與傳統文創", promo: "憑乘車票證享 88 折" }
+    ]
+  },
+  "忠孝復興": {
+    "咖啡廳☕": [
+      { name: "St.1 Cafe' 一街咖啡", desc: "台南精品烘豆名名店北上，必點精品拿鐵與可麗露", promo: "憑乘車紀錄現折 $15" },
+      { name: "L'Appart 閃電泡芙", desc: "精緻法式甜點專賣，閃電泡芙與經典義式", promo: "購甜點送美式咖啡一杯" },
+      { name: "Homey's Cafe", desc: "隱身二樓老屋，文青與學生深夜最愛的工作拿鐵", promo: "單點飲品即享 9 折" }
+    ],
+    "飲料店🥤": [
+      { name: "迷客夏 Milksha (大安店)", desc: "天然綠光牧場鮮奶系列，推薦芋頭鮮奶", promo: "可用捷運點數折抵消費" },
+      { name: "再睡5分鐘 (大安店)", desc: "滴妹人氣奶蓋茶，推薦招牌棉被午茉綠", promo: "點特調茶飲贈點數 10 pt" },
+      { name: "珍煮丹 (大安復興店)", desc: "濃厚黑糖珍珠鮮奶，純手工翻炒黑糖黑蜜", promo: "憑大眾運輸票證大杯折 $5" }
+    ],
+    "文創選物🎨": [
+      { name: "誠品生活 (東區地下街店)", desc: "地下街文創長廊，精選文具雜貨、設計好書與好禮", promo: "誠品會員綁定加碼發點" },
+      { name: "Fukurou Living 選品", desc: "代理歐美日系小眾設計服飾、生活實用設計配件", promo: "出示捷運卡享 95 折" },
+      { name: "米飛兔 miffy 文創專賣", desc: "正版米飛兔聯名生活家居小物、帆布袋與公仔", promo: "精選療癒文創 9 折" }
+    ]
+  },
+  "西門": {
+    "咖啡廳☕": [
+      { name: "蜂大咖啡 Fong Da", desc: "一甲子老字號，合桃酥、雞仔餅配經典老派虹吸", promo: "買伴手禮送濾掛包" },
+      { name: "Cho Cafe' 町咖啡", desc: "西門老宅精品烘豆咖啡，主打手沖單品原豆", promo: "單品現磨咖啡現折 $20" },
+      { name: "Cafe' Dalida", desc: "紅樓露天庭園植栽風格，咖啡、調酒與精品輕食", promo: "下午茶時段享 9 折優惠" }
+    ],
+    "飲料店🥤": [
+      { name: "幸福堂 (西門町總店)", desc: "招牌古法黑糖珍珠鮮奶，現炒珍珠", promo: "捷運金庫集點加碼 +15 pt" },
+      { name: "老派金魚 Goldfish", desc: "古早味綠豆沙牛奶，濃厚泰式奶茶與冬瓜檸檬", promo: "出示捷運 App 免費加粉條" },
+      { name: "萬波島嶼紅茶 (西門店)", desc: "眷村風水果茶、紅豆粉粿鮮奶與蘭葉那堤", promo: "捷運點數一鍵全額折抵" }
+    ],
+    "文創選物🎨": [
+      { name: "西門紅樓 創意市集區", desc: "台灣在地百家手作原創、皮革、手繪明信片", promo: "單筆滿 $500 折抵 $50" },
+      { name: "萬年商業大樓 模玩選物", desc: "日系動漫公仔、ACG 文創手作與限定一番賞周邊", promo: "打卡贈送限定設計杯墊" },
+      { name: "吉卜力共和國 (西門店)", desc: "宮崎駿吉卜力工作室正版日系授權精品選物商店", promo: "單筆滿 $1000 贈限量環保袋" }
+    ]
+  }
+};
+
+/**
+ * 根據任務目標站動態渲染步驟 2 的特約店家清單
+ */
+function renderCooperativeShops(station) {
+  const accordion = document.getElementById("cooperative-shops-accordion");
+  if (!accordion) return;
+  
+  // 清理站名（如 "台大醫院站" 統一轉成 "台大醫院"）
+  const cleanStation = station ? station.replace("站", "").trim() : "中山";
+  const shopsData = COOPERATIVE_SHOPS[cleanStation];
+  
+  if (!shopsData) {
+    accordion.innerHTML = `<p style="font-size: 0.68rem; color: var(--text-muted); text-align: center; padding: 10px 0;">本站暫無合作店家資訊。</p>`;
+    return;
+  }
+  
+  let html = "";
+  for (const [category, list] of Object.entries(shopsData)) {
+    html += `
+      <div class="shop-category-group" style="margin-bottom: 0.8rem;">
+        <div style="font-size: 0.72rem; font-weight: 800; color: var(--primary-purple); display: flex; align-items: center; gap: 4px; margin-bottom: 0.3rem;">
+          ${category}
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding-left: 6px;">
+    `;
+    
+    list.forEach(shop => {
+      html += `
+          <div style="border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 4px; text-align: left;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-dark);">${shop.name}</div>
+            <div style="font-size: 0.62rem; color: var(--text-muted); line-height: 1.35; margin-top: 1px;">${shop.desc}</div>
+            <span style="font-size: 0.6rem; color: #e91e63; font-weight: 700; background-color: #fce4ec; padding: 2px 5px; border-radius: 4px; display: inline-block; margin-top: 3px;">🎁 ${shop.promo}</span>
+          </div>
+      `;
+    });
+    
+    html += `
+        </div>
+      </div>
+    `;
+  }
+  
+  accordion.innerHTML = html;
 }
