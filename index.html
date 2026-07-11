@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>燎原智庫・點燃同行 - 網頁版 Prototype</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- 桌面版展示外層結構 (手機版會透過 CSS 隱藏) -->
+  <div id="desktop-dashboard">
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-brand">
+        <span class="badge">2026 捷運盃黑客松提案</span>
+        <h1>燎原智庫・點燃同行</h1>
+        <p class="subtitle">以「捷運點」為核心的社群金融與 GenAI 任務引擎</p>
+      </div>
+
+      <div class="sidebar-section">
+        <h3><i class="fa-solid fa-people-group"></i> 參賽團隊資訊</h3>
+        <div class="team-card">
+          <div class="team-name">捷點星火聯盟</div>
+          <p class="section-desc" style="margin-top: 0.4rem; font-size: 0.8rem; color: rgba(255,255,255,0.7); line-height: 1.4;">
+            本參賽團隊由金融科技與數據統計專家組成，致力於結合微型社群金融與生成式 AI 技術，活化捷運點數生態圈。
+          </p>
+        </div>
+      </div>
+
+      <!-- 產品核心機制與即時試用 -->
+      <!-- 產品核心機制與即時試用 (步驟流程設計) -->
+      <div class="sidebar-section">
+        <h3><i class="fa-solid fa-route"></i> 核心機制與互動試用流程</h3>
+        <p class="section-desc">請依序點擊下方步驟的「即時試用」按鈕，即可引導 App 畫面進行完整點數生態圈的動態演示：</p>
+        
+        <div class="workflow-timeline">
+          <!-- 步驟一 -->
+          <div class="workflow-step">
+            <div class="step-badge badge-teal">步驟 01</div>
+            <div class="step-body">
+              <h4>智慧社群金庫 (Social Vault)</h4>
+              <p>支援家庭、伴侶與快閃戰友。建立共同點數池共享眾籌，並藉由後端邏輯自動拆帳。</p>
+              <button id="btn-interactive-vault" class="btn-trial btn-trial-teal">
+                <i class="fa-solid fa-user-plus"></i> 👉 即時試用：邀請好友加入
+              </button>
+            </div>
+          </div>
+
+          <!-- 步驟二 -->
+          <div class="workflow-step">
+            <div class="step-badge badge-purple">步驟 02</div>
+            <div class="step-body">
+              <h4>GenAI 動態任務引擎</h4>
+              <p>根據進出站票證與同行特徵，LLM (Vertex AI) 動態生成專屬限時任務引導 O2O 人流。</p>
+              <button id="btn-interactive-quest" class="btn-trial btn-trial-purple">
+                <i class="fa-solid fa-train-subway"></i> 👉 即時試用：模擬雙人乘車
+              </button>
+            </div>
+          </div>
+
+          <!-- 步驟三 -->
+          <div class="workflow-step">
+            <div class="step-badge badge-gold">步驟 03</div>
+            <div class="step-body">
+              <h4>Gemini Vision 視覺審核</h4>
+              <p>上傳合作商家消費發票，Gemini 自動辨識明細並比對出站軌跡，防偽驗證後發放獎勵。</p>
+              <button id="btn-interactive-vision" class="btn-trial btn-trial-gold">
+                <i class="fa-solid fa-file-invoice-dollar"></i> 👉 即時試用：模擬收據驗證
+              </button>
+            </div>
+          </div>
+
+          <!-- 步驟四 -->
+          <div class="workflow-step">
+            <div class="step-badge" style="background-color: #11998e; color: #fff;">步驟 04</div>
+            <div class="step-body">
+              <h4>金庫滿額分帳結算</h4>
+              <p>當社群金庫成功集滿 15,000 pt 後，自動啟動分帳解鎖，將公有金庫點數平分撥入各人帳戶並重置。</p>
+              <button id="btn-interactive-settle" class="btn-trial" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: #fff; border: none; cursor: pointer;">
+                <i class="fa-solid fa-scale-balanced"></i> 👉 即時試用：金庫滿額結算
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 額外模擬：日常通勤 -->
+        <div class="extra-sim-box">
+          <span class="extra-sim-title"><i class="fa-solid fa-gamepad"></i> 其他日常模擬：</span>
+          <button id="btn-sim-commute" class="btn-trial btn-trial-outline">
+            <i class="fa-solid fa-plus"></i> 模擬：個人日常通勤出站 (+15 pt)
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <p><i class="fa-solid fa-mobile-screen-button"></i> <strong>手機預覽說明：</strong></p>
+        <p>手機與電腦連線同個 Wi-Fi 後，用手機掃描或輸入本地 IP 即可呈現滿版原生 App 效果！</p>
+      </div>
+    </aside>
+
+    <main class="phone-wrapper">
+      <!-- 虛擬 iPhone 外框 -->
+      <div class="iphone-container">
+        <div class="iphone-notch">
+          <div class="dynamic-island" id="phone-dynamic-island">
+            <span class="island-text">系統運作中</span>
+          </div>
+        </div>
+        
+        <!-- 手機螢幕內部 -->
+        <div class="iphone-screen">
+          
+          <!-- 手機頂部狀態列 -->
+          <header class="phone-status-bar">
+            <span class="time">17:09</span>
+            <div class="status-icons">
+              <i class="fa-solid fa-signal"></i>
+              <i class="fa-solid fa-wifi"></i>
+              <div class="battery"><i class="fa-solid fa-battery-full"></i></div>
+            </div>
+          </header>
+
+          <!-- APP 內容區視窗 -->
+          <div class="app-viewport">
+            
+            <!-- 視窗 1：首頁 (Home) -->
+            <section id="view-home" class="app-view active">
+              <div class="app-header bg-gradient-teal">
+                <div class="user-greeting">
+                  <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop" alt="User Avatar" class="user-avatar">
+                  <div class="greeting-text">
+                    <span class="hello">哈囉，您好 👋</span>
+                    <span class="member-tier">捷運 Go App 會員 · 捷客星火</span>
+                  </div>
+                </div>
+                <div class="quick-stats-row">
+                  <div class="stat-card">
+                    <span class="label">個人累積點數</span>
+                    <span class="value" id="home-personal-points">5,820 <span class="unit">pt</span></span>
+                  </div>
+                  <div class="stat-card">
+                    <span class="label">當月省下通勤費</span>
+                    <span class="value">$1,240</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="view-content">
+                <!-- 捷運動態動線模擬器 -->
+                <div class="content-card">
+                  <div class="card-title">
+                    <h4><i class="fa-solid fa-route text-teal"></i> 通勤軌跡模擬</h4>
+                    <span class="tag tag-live">AI 即時分析</span>
+                  </div>
+                  <p class="card-desc">模擬您的捷運卡進出站紀錄，測試 GenAI 任務生成引擎：</p>
+                  
+                  <div class="route-simulator">
+                    <div class="station-select-vertical" style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-bottom: 0.8rem;">
+                      <div class="station-node-row" style="display: flex; align-items: center; gap: 10px; background-color: #f5f5f5; padding: 8px 12px; border-radius: 8px;">
+                        <span class="dot line-blue" style="width: 8px; height: 8px; background-color: #2196F3; border-radius: 50%; flex-shrink: 0;"></span>
+                        <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); width: 45px; flex-shrink: 0;">起點站</span>
+                        <select id="sim-start-station" style="flex-grow: 1; border: none; background: transparent; font-size: 0.78rem; font-weight: 600; padding: 4px 0; outline: none; cursor: pointer; width: 100%;">
+                          <option value="台北車站">台北車站 (BL12 / R10)</option>
+                          <option value="板橋">板橋 (BL07)</option>
+                          <option value="市政府">市政府 (BL18)</option>
+                          <option value="台大醫院">台大醫院 (R09)</option>
+                          <option value="行天宮">行天宮 (O14)</option>
+                        </select>
+                      </div>
+                      
+                      <!-- 垂直連接虛線 -->
+                      <div style="display: flex; align-items: center; padding-left: 16px; margin: -4px 0; height: 12px;">
+                        <div style="border-left: 2px dashed #ccc; height: 100%;"></div>
+                      </div>
+
+                      <div class="station-node-row" style="display: flex; align-items: center; gap: 10px; background-color: #f5f5f5; padding: 8px 12px; border-radius: 8px;">
+                        <span class="dot line-red" style="width: 8px; height: 8px; background-color: #E91E63; border-radius: 50%; flex-shrink: 0;"></span>
+                        <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); width: 45px; flex-shrink: 0;">終點站</span>
+                        <select id="sim-end-station" style="flex-grow: 1; border: none; background: transparent; font-size: 0.78rem; font-weight: 600; padding: 4px 0; outline: none; cursor: pointer; width: 100%;">
+                          <option value="中山" selected>中山 (R11 / G14)</option>
+                          <option value="台大醫院">台大醫院 (R09)</option>
+                          <option value="忠孝復興">忠孝復興 (BL15)</option>
+                          <option value="西門">西門 (BL11 / G12)</option>
+                          <option value="行天宮">行天宮 (O14)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="companions-selection" style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 0.8rem; width: 100%;">
+                      <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-users"></i> 選擇同行乘車隊員：</span>
+                      <div class="sim-companions-list" id="sim-companions-list">
+                        <!-- 由 JS 動態渲染金庫隊員核取方塊 -->
+                      </div>
+                    </div>
+
+                    <button id="btn-trigger-route" class="btn btn-teal btn-block">
+                      <i class="fa-solid fa-paper-plane"></i> 模擬乘車出站
+                    </button>
+                  </div>
+                </div>
+
+
+
+                 <!-- 廣告/捷運公告 -->
+                 <div class="promo-banner" onclick="switchTab('vault')">
+                   <div class="promo-content">
+                     <span class="promo-tag">核心機制</span>
+                     <h3>首創「快閃戰隊金庫」，與好友合力眾籌點數兌換好禮！</h3>
+                     <p>出遊、觀賽、聚餐皆可一鍵發起臨時金庫，活動後按貢獻自動拆帳。</p>
+                   </div>
+                   <div class="promo-img">
+                     <i class="fa-solid fa-people-group"></i>
+                   </div>
+                 </div>
+              </div>
+            </section>
+
+            <!-- 視窗 2：社群金庫 (Vault) -->
+            <section id="view-vault" class="app-view">
+              <div class="app-header bg-gradient-teal flex-header">
+                <div>
+                  <span class="header-pre">智慧社群金庫</span>
+                  <h2 id="vault-title">家庭金庫 · 全家出遊計畫</h2>
+                </div>
+                <button class="btn-icon" id="btn-vault-setting"><i class="fa-solid fa-gear"></i></button>
+              </div>
+
+              <div class="view-content">
+                <!-- 總體目標進度環 -->
+                <div class="vault-progress-card">
+                  <div class="progress-ring-container">
+                    <svg class="progress-ring" width="160" height="160">
+                      <circle class="progress-ring__circle-bg" stroke="#1A3E39" stroke-width="12" fill="transparent" r="70" cx="80" cy="80"/>
+                      <circle class="progress-ring__circle" id="vault-progress-circle" stroke="#FFB300" stroke-width="12" stroke-dasharray="439.8" stroke-dashoffset="74.7" fill="transparent" r="70" cx="80" cy="80"/>
+                    </svg>
+                    <div class="progress-ring-text">
+                      <span class="points-val" id="vault-points-display">12,480</span>
+                      <span class="points-label">捷運點數</span>
+                    </div>
+                  </div>
+                  <div class="progress-info">
+                    <div class="progress-percentage"><span id="vault-percent-display">83</span>%</div>
+                    <div class="progress-desc">距離目標 <strong>15,000 pt</strong> 還差 <strong id="vault-left-points">2,520 pt</strong></div>
+                  </div>
+                </div>
+
+                <!-- 戰隊/金庫類型切換器 -->
+                <div class="vault-toggle">
+                  <button class="vault-toggle-btn active" id="vault-toggle-family">
+                    <i class="fa-solid fa-house-chimney"></i> 家庭點數池
+                  </button>
+                  <button class="vault-toggle-btn" id="vault-toggle-squad">
+                    <i class="fa-solid fa-bolt"></i> 快閃戰隊金庫
+                  </button>
+                </div>
+
+                <!-- 金庫成員列表 -->
+                <div class="content-card">
+                  <div class="card-title">
+                    <h4>成員貢獻榜</h4>
+                    <span class="sub-text">點數合併累計中</span>
+                  </div>
+                  
+                  <div class="member-list" id="vault-member-list">
+                    <!-- 成員 1 -->
+                    <div class="member-item">
+                      <div class="member-avatar bg-blue">我</div>
+                      <div class="member-info">
+                        <span class="member-name">我</span>
+                        <div class="member-progress-container">
+                          <div class="member-progress-bar bg-blue" style="width: 80%"></div>
+                        </div>
+                      </div>
+                      <div class="member-points">
+                        <span class="val" id="val-member-0">5,820</span> <span class="unit">pt</span>
+                      </div>
+                    </div>
+                    <!-- 成員 2 -->
+                    <div class="member-item">
+                      <div class="member-avatar bg-pink">楊</div>
+                      <div class="member-info">
+                        <span class="member-name">楊小芸 (伴侶)</span>
+                        <div class="member-progress-container">
+                          <div class="member-progress-bar bg-pink" style="width: 60%"></div>
+                        </div>
+                      </div>
+                      <div class="member-points">
+                        <span class="val" id="val-member-1">4,310</span> <span class="unit">pt</span>
+                      </div>
+                    </div>
+                    <!-- 成員 3 -->
+                    <div class="member-item">
+                      <div class="member-avatar bg-green">陳</div>
+                      <div class="member-info">
+                        <span class="member-name">陳阿明 (好友)</span>
+                        <div class="member-progress-container">
+                          <div class="member-progress-bar bg-green" style="width: 32%"></div>
+                        </div>
+                      </div>
+                      <div class="member-points">
+                        <span class="val" id="val-member-2">2,350</span> <span class="unit">pt</span>
+                      </div>
+                    </div>
+                  </div>
+
+
+                </div>
+
+                <!-- 金庫動態日誌 -->
+                <div class="content-card">
+                  <div class="card-title">
+                    <h4>最近入點明細</h4>
+                  </div>
+                  <div class="log-list" id="vault-log-list">
+                    <div class="log-item">
+                      <div class="log-icon bg-light-green"><i class="fa-solid fa-train-subway text-green"></i></div>
+                      <div class="log-text">
+                        <strong>捷運搭乘回饋 (我)</strong>
+                        <span>今天 09:12 · 板橋站 → 台北車站</span>
+                      </div>
+                      <div class="log-points positive">+15 pt</div>
+                    </div>
+                    <div class="log-item">
+                      <div class="log-icon bg-light-teal"><i class="fa-solid fa-wand-magic-sparkles text-teal"></i></div>
+                      <div class="log-text">
+                        <strong>雙人任務完成：中山站出站 (小芸)</strong>
+                        <span>昨天 20:45 · 系統核發</span>
+                      </div>
+                      <div class="log-points positive">+120 pt</div>
+                    </div>
+                    <div class="log-item">
+                      <div class="log-icon bg-light-blue"><i class="fa-solid fa-location-dot text-blue"></i></div>
+                      <div class="log-text">
+                        <strong>綠色景點簽到：大安森林公園 (阿明)</strong>
+                        <span>3 天前 · 地理圍欄自動入點</span>
+                      </div>
+                      <div class="log-points positive">+50 pt</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 視窗 3：動態任務 (Quest) -->
+            <section id="view-quest" class="app-view">
+              <div class="app-header bg-gradient-purple flex-header">
+                <div>
+                  <span class="header-pre">GenAI 動態任務引擎</span>
+                  <h2>任務大廳</h2>
+                </div>
+                <span class="badge badge-purple" id="quest-count-badge">1 個進行中</span>
+              </div>
+
+              <div class="view-content">
+                <!-- 目前進行中任務卡 -->
+                <div id="active-quest-container">
+                  <div class="content-card border-purple">
+                    <div class="card-title">
+                      <span class="badge-active-quest"><i class="fa-solid fa-clock"></i> 限時任務</span>
+                      <span class="quest-timer" id="quest-timer-text">剩餘 02:14:33</span>
+                    </div>
+
+                    <h3 class="quest-name" id="quest-title-text">雙人週末中山站出遊</h3>
+                    <p class="quest-intro-desc">系統偵測到您與小芸的共同乘車意圖 (AI 信心值 94%)，已為您客製化生成此限時任務：</p>
+                    
+                    <div class="quest-reward-box">
+                      <span class="reward-lbl">任務獎勵</span>
+                      <span class="reward-val" id="quest-reward-value"><i class="fa-solid fa-vault"></i> 注入金庫 +250 <span class="unit">pt</span></span>
+                    </div>
+
+                    <!-- 戰隊協作狀態 -->
+                    <div class="quest-team-status" id="quest-team-status">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span class="status-title" style="margin-bottom: 0;"><i class="fa-solid fa-people-group"></i> 戰隊隊員狀態：</span>
+                        <a href="javascript:void(0)" id="quest-btn-invite" style="font-size: 0.7rem; color: var(--primary-teal); font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 3px;"><i class="fa-solid fa-user-plus"></i> 邀請戰友加入</a>
+                      </div>
+                      <div class="members-status-grid" id="quest-members-status-grid">
+                        <div class="m-status-item">
+                          <span class="m-dot bg-blue">我</span>
+                          <span class="m-label">已出站 ✓</span>
+                        </div>
+                        <div class="m-status-item">
+                          <span class="m-dot bg-pink">楊</span>
+                          <span class="m-label">已出站 ✓</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 四步驟進度條 -->
+                    <div class="quest-steps-wrapper">
+                      <!-- 步驟 1 -->
+                      <div class="step-item completed">
+                        <div class="step-icon"><i class="fa-solid fa-check"></i></div>
+                        <div class="step-content">
+                          <strong>步驟 1: 雙人共同出站</strong>
+                          <p>共同搭乘捷運並於中山站出站 (已完成)</p>
+                        </div>
+                      </div>
+                      <!-- 步驟 2 -->
+                      <div class="step-item completed">
+                        <div class="step-icon"><i class="fa-solid fa-check"></i></div>
+                        <div class="step-content">
+                          <strong>步驟 2: 前往指定合作店家</strong>
+                          <p>前往中山商圈合作店家消費 (已抵達)</p>
+                        </div>
+                      </div>
+                      <!-- 步驟 3 -->
+                      <div class="step-item current" id="step-upload-section">
+                        <div class="step-icon">3</div>
+                        <div class="step-content">
+                          <strong>步驟 3: 上傳收據或消費拍照</strong>
+                          <p>透過 Gemini 多模態 AI 自動辨識審核</p>
+                          
+                          <!-- 收據上傳模擬按鈕 -->
+                          <div class="upload-box-wrapper mt-3">
+                            <div class="upload-dropzone" id="btn-upload-receipt">
+                              <i class="fa-solid fa-camera"></i>
+                              <span>點擊拍攝或上傳收據照片</span>
+                              <span class="upload-sub">支援 Gemini Vision 智能秒級審核</span>
+                            </div>
+                            <!-- 隱藏的 input 用於選擇檔案 -->
+                            <input type="file" id="file-receipt" accept="image/*" style="display: none;">
+                          </div>
+
+                          <!-- 掃描處理中的動畫特效 -->
+                          <div class="scanning-overlay" id="scanning-overlay" style="display: none;">
+                            <div class="scan-bar"></div>
+                            <div class="spinner-container">
+                              <i class="fa-solid fa-circle-notch fa-spin"></i>
+                              <span>Gemini 視覺模型辨識收據中...</span>
+                              <pre class="ai-console-log" id="ai-log-text">初始化 Vertex AI 服務中...</pre>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- 步驟 4 -->
+                      <div class="step-item" id="step-verify-section">
+                        <div class="step-icon">4</div>
+                        <div class="step-content">
+                          <strong>步驟 4: 自動派發點數</strong>
+                          <p>審核成功後，點數即時匯入金庫帳戶</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 暫無進行中任務時顯示的畫面 -->
+                <div id="no-quest-container" style="display: none;">
+                  <div class="empty-state">
+                    <div class="empty-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <h3>目前沒有進行中的限時任務</h3>
+                    <p>請至「首頁」使用乘車模擬器，或攜伴搭乘捷運，AI 將為您即時生成專屬任務！</p>
+                    <button class="btn btn-teal btn-sm" onclick="switchTab('home')">前往首頁模擬</button>
+                  </div>
+                </div>
+
+                <!-- 其他推薦任務 -->
+                <div class="content-card">
+                  <div class="card-title">
+                    <h4>熱門商圈任務推薦</h4>
+                  </div>
+                  
+                  <div class="recommended-quests">
+                    <!-- 任務 1 -->
+                    <div class="quest-recommend-item">
+                      <div class="quest-icon bg-orange"><i class="fa-solid fa-map-location-dot"></i></div>
+                      <div class="quest-desc">
+                        <div class="name">地下鐵尋寶趣</div>
+                        <div class="loc"><i class="fa-solid fa-location-dot"></i> 台大醫院站 · 限時 2 天</div>
+                      </div>
+                      <div class="quest-action">
+                        <span class="points">+80 pt</span>
+                        <button class="btn btn-xs btn-purple btn-accept-quest" data-title="地下鐵尋寶趣" data-points="80" data-station="台大醫院">接受</button>
+                      </div>
+                    </div>
+                    <!-- 任務 2 -->
+                    <div class="quest-recommend-item">
+                      <div class="quest-icon bg-red"><i class="fa-solid fa-utensils"></i></div>
+                      <div class="quest-desc">
+                        <div class="name">夜市美食聚點</div>
+                        <div class="loc"><i class="fa-solid fa-location-dot"></i> 行天宮站 · 限時 5 小時</div>
+                      </div>
+                      <div class="quest-action">
+                        <span class="points">+150 pt</span>
+                        <button class="btn btn-xs btn-purple btn-accept-quest" data-title="夜市美食聚點" data-points="150" data-station="行天宮">接受</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 視窗 4：我的 (Profile) -->
+            <section id="view-profile" class="app-view">
+              <div class="app-header bg-gradient-teal">
+                <div class="profile-main">
+                  <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop" alt="User Avatar" class="profile-avatar">
+                  <h3>我</h3>
+                  <p>捷運 Go App 會員</p>
+                </div>
+              </div>
+
+              <div class="view-content">
+
+
+                <!-- 選單列表 -->
+                <div class="content-card p-0">
+                  <ul class="menu-list">
+                    <li>
+                      <div class="menu-item-left">
+                        <i class="fa-solid fa-receipt text-teal"></i>
+                        <span>個人點數歷史明細</span>
+                      </div>
+                      <i class="fa-solid fa-chevron-right text-gray"></i>
+                    </li>
+                    <li>
+                      <div class="menu-item-left">
+                        <i class="fa-solid fa-ticket text-teal"></i>
+                        <span>已兌換好康票券</span>
+                      </div>
+                      <div class="badge-count">2 張</div>
+                    </li>
+                    <li>
+                      <div class="menu-item-left">
+                        <i class="fa-solid fa-shield-halved text-teal"></i>
+                        <span>隱私權與個資去識別設定</span>
+                      </div>
+                      <i class="fa-solid fa-chevron-right text-gray"></i>
+                    </li>
+                    <li>
+                      <div class="menu-item-left">
+                        <i class="fa-solid fa-circle-question text-teal"></i>
+                        <span>常見問題與客服</span>
+                      </div>
+                      <i class="fa-solid fa-chevron-right text-gray"></i>
+                    </li>
+                  </ul>
+                </div>
+
+                <!-- 登出/解除綁定按鈕 -->
+                <button class="btn btn-outline btn-block mt-3 mb-4">切換使用者帳戶</button>
+              </div>
+            </section>
+
+          </div>
+
+          <!-- APP 底部導覽列 -->
+          <nav class="phone-bottom-nav">
+            <button class="nav-item active" onclick="switchTab('home')">
+              <i class="fa-solid fa-house"></i>
+              <span>首頁</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('vault')">
+              <i class="fa-solid fa-vault"></i>
+              <span>金庫</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('quest')">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>任務</span>
+              <div class="nav-dot" id="nav-quest-dot"></div>
+            </button>
+            <button class="nav-item" onclick="switchTab('profile')">
+              <i class="fa-solid fa-user"></i>
+              <span>我的</span>
+            </button>
+          </nav>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 彈窗 1：邀請成員加入金庫 -->
+  <div class="modal-backdrop" id="invite-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-plus text-teal"></i> 邀請成員加入社群金庫</h3>
+        <button class="btn-close" id="btn-close-invite"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <p>建立共同點數池，一起集點兌換高價值線下商品！</p>
+        <div class="form-group">
+          <label for="invite-name">受邀人姓名：</label>
+          <input type="text" id="invite-name" placeholder="例如：王大同" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="invite-phone">受邀人手機號碼：</label>
+          <input type="tel" id="invite-phone" placeholder="例如：0912345678" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="invite-relation">關係設定：</label>
+          <select id="invite-relation" class="form-input">
+            <option value="家庭">家庭成員</option>
+            <option value="伴侶">伴侶</option>
+            <option value="戰友">快閃戰友 (臨時金庫)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-invite">取消</button>
+        <button class="btn btn-teal" id="btn-submit-invite">傳送邀請函</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 彈窗 2：金庫滿額分帳結算 -->
+  <div class="modal-backdrop" id="settlement-modal" style="display: none; align-items: center; justify-content: center; z-index: 1000;">
+    <div class="modal-card" style="max-width: 320px; text-align: center; padding: 1.2rem;">
+      <div style="font-size: 3rem; margin-bottom: 0.8rem; animation: bounceIn 0.8s forwards;">🎉</div>
+      <h3 style="color: var(--primary-teal-dark); font-weight: 800; font-size: 1.1rem; margin-bottom: 4px;">捷運動態金庫達標！</h3>
+      <p style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 1rem;">社群金庫眾籌已成功突破 15,000 pt 目標！</p>
+      
+      <!-- 總額與結算卡片 -->
+      <div style="background-color: #fafafa; border-radius: 12px; border: 1.5px solid #e0e0e0; padding: 0.8rem; margin-bottom: 1rem; text-align: left;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ddd; padding-bottom: 6px; margin-bottom: 6px; font-size: 0.72rem; color: var(--text-dark);">
+          <span>目前金庫總額：</span>
+          <strong style="color: var(--primary-teal-dark);" id="settle-total-points">15,050 pt</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-bottom: 6px;">
+          <span>分帳算法：</span>
+          <span style="font-weight: 700; color: #1e88e5;">⚖️ 均等平分 (Equal Split)</span>
+        </div>
+        
+        <!-- 分帳名單清單 -->
+        <div style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-top: 10px; margin-bottom: 6px;">隊員領回點數明細：</div>
+        <div id="settle-member-list" style="display: flex; flex-direction: column; gap: 6px;">
+          <!-- 由 JS 動態生成每人分得多少 -->
+        </div>
+      </div>
+      
+      <p style="font-size: 0.65rem; color: #e91e63; font-weight: 600; background-color: #fce4ec; padding: 6px; border-radius: 6px; margin-bottom: 1.2rem; line-height: 1.3;">
+        💡 點擊確認後將會派發點數至各人帳戶，並將產品 Demo 演示重置回初始化狀態。
+      </p>
+
+      <button class="btn btn-teal btn-block" id="btn-confirm-settlement" style="background: linear-gradient(135deg, var(--primary-teal) 0%, var(--primary-teal-dark) 100%); font-weight: 700; border: none; cursor: pointer;">
+        <i class="fa-solid fa-circle-check"></i> 確認分帳結算並重置 Demo
+      </button>
+    </div>
+  </div>
+
+
+
+  <!-- 系統頂部 Toast 通告容器 -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- JS 邏輯導入 -->
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

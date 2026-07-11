@@ -1,0 +1,15 @@
+# Node dependencies
+node_modules/
+
+# Production build artifacts
+dist/
+
+# System files
+.DS_Store
+Thumbs.db
+*.local
+~$*
+
+# Agent logs/configs
+.agents/
+.claude/
