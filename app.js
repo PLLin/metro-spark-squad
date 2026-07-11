@@ -85,6 +85,33 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("btn-interactive-quest").addEventListener("click", () => {
+    // 為了展示乘車模擬，如果預設任務已經完成，重置其步驟為 1 (未出站)
+    let target = STATE.activeQuests.find(q => q.station === "中山");
+    if (target) {
+      target.step = 1;
+    } else {
+      // 如果沒有中山任務，自動加一個
+      target = {
+        id: "default-quest",
+        title: "雙人週末中山站出遊",
+        station: "中山",
+        category: "咖啡廳☕",
+        reward: 250,
+        step: 1,
+        timerSeconds: 8073,
+        riders: ["我", "楊小芸 (伴侶)"],
+        invitees: [],
+        isExpanded: true
+      };
+      STATE.activeQuests.push(target);
+    }
+    
+    // 收合其他所有任務，展開中山任務
+    STATE.activeQuests.forEach(q => {
+      q.isExpanded = (q.id === target.id);
+    });
+    renderActiveQuests();
+
     switchTab('home');
     setTimeout(() => {
       // 自動設起點台北車站，終點中山站
@@ -107,31 +134,37 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("btn-interactive-vision").addEventListener("click", () => {
-    if (!STATE.questActive || STATE.questStep !== 3) {
-      showToast("自動準備任務", "偵測到您尚未觸發任務，系統正在自動為您模擬出站...", "purple");
-      switchTab('home');
-      setTimeout(() => {
-        document.getElementById("sim-start-station").value = "台北車站";
-        document.getElementById("sim-end-station").value = "中山";
-        
-        const checkboxes = document.querySelectorAll('input[name="sim-companion-check"]');
-        if (checkboxes.length >= 2) {
-          checkboxes[0].checked = true;
-          checkboxes[1].checked = true;
-          checkboxes[1].parentElement.classList.add("checked");
-          for (let i = 2; i < checkboxes.length; i++) {
-            checkboxes[i].checked = false;
-            checkboxes[i].parentElement.classList.remove("checked");
-          }
-        }
-        triggerRideSimulation();
-      }, 200);
-    } else {
-      switchTab('quest');
-      setTimeout(() => {
-        triggerReceiptSimulation(quest.id);
-      }, 300);
+    let quest = STATE.activeQuests.find(q => q.station === "中山");
+    if (!quest) {
+      // 如果沒有中山任務，自動建立一個
+      quest = {
+        id: "default-quest",
+        title: "雙人週末中山站出遊",
+        station: "中山",
+        category: "咖啡廳☕",
+        reward: 250,
+        step: 3,
+        timerSeconds: 8073,
+        riders: ["我", "楊小芸 (伴侶)"],
+        invitees: [],
+        isExpanded: true
+      };
+      STATE.activeQuests.push(quest);
     }
+    
+    // 強制將中山任務設為步驟三，以供收據驗證展示
+    quest.step = 3;
+    
+    // 收合其他所有任務，展開中山任務
+    STATE.activeQuests.forEach(q => {
+      q.isExpanded = (q.id === quest.id);
+    });
+    renderActiveQuests();
+
+    switchTab('quest');
+    setTimeout(() => {
+      triggerReceiptSimulation(quest.id);
+    }, 300);
   });
 
   document.getElementById("btn-sim-commute").addEventListener("click", triggerCommuteSimulation);
@@ -277,9 +310,11 @@ function triggerReceiptSimulation(questId) {
   const quest = STATE.activeQuests.find(q => q.id === targetQuestId);
   if (!quest) return;
 
-  // 顯示該卡片底下的掃描覆蓋動畫
+  // 顯示該卡片底下的掃描覆蓋動畫，並隱藏上傳按鈕區域
+  const wrapper = document.getElementById("upload-wrapper-" + quest.id);
   const overlay = document.getElementById("scanning-overlay-" + quest.id);
   const logText = document.getElementById("ai-log-text-" + quest.id);
+  if (wrapper) wrapper.style.display = "none";
   if (overlay) overlay.style.display = "flex";
   
   // 模擬 Gemini AI 逐步辨識日誌
@@ -321,6 +356,7 @@ function triggerReceiptSimulation(questId) {
   setTimeout(() => {
     clearInterval(logInterval);
     if (overlay) overlay.style.display = "none";
+    if (wrapper) wrapper.style.display = "block";
     
     // 標註該任務為完成
     quest.step = 4;
@@ -1243,11 +1279,12 @@ function renderActiveQuests() {
             <!-- 步驟 3 -->
             <div class="step-item ${step3Class}" id="step-upload-section-${quest.id}">
               <div class="step-icon">${step3Icon}</div>
-              <div class="step-content">
+              <div class="step-content" style="width: 100%;">
                 <strong>步驟 3: 上傳收據或消費拍照</strong>
                 <p>${step3Desc}</p>
                 
-                <div class="upload-box-wrapper mt-3">
+                <!-- 上傳按鈕區域 (掃描時隱藏) -->
+                <div class="upload-box-wrapper mt-3" id="upload-wrapper-${quest.id}">
                   <div class="upload-dropzone btn-upload-receipt" data-id="${quest.id}">
                     <i class="fa-solid fa-camera"></i>
                     <span>點擊拍攝或上傳收據照片</span>
@@ -1256,13 +1293,14 @@ function renderActiveQuests() {
                   <input type="file" id="file-receipt-${quest.id}" accept="image/*" style="display: none;" class="file-receipt" data-id="${quest.id}">
                 </div>
 
-                <div class="scanning-overlay" id="scanning-overlay-${quest.id}" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.96); z-index: 50; flex-direction: column; align-items: center; justify-content: center; padding: 1.2rem; border-radius: 16px;">
-                  <div class="scan-bar" style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to bottom, transparent, var(--primary-purple)); animation: scanEffect 1.5s infinite linear;"></div>
+                <!-- 掃描處理中的動畫特效 (流式排版，取代上傳按鈕，不遮擋其他步驟) -->
+                <div class="scanning-overlay" id="scanning-overlay-${quest.id}" style="display: none; position: relative; width: 100%; height: auto; min-height: 220px; background-color: rgba(13, 27, 42, 0.96); border-radius: 12px; margin-top: 10px; padding: 1rem; box-sizing: border-box; flex-direction: column; align-items: center; justify-content: center; color: #fff; overflow: hidden; z-index: 5;">
+                  <div class="scan-bar" style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to right, transparent, #ba68c8, #ba68c8, transparent); box-shadow: 0 0 10px #ba68c8; animation: scan 2s linear infinite;"></div>
                   <div class="spinner-container" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
-                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 1.6rem; color: var(--primary-purple);"></i>
-                    <span style="font-size: 0.72rem; font-weight: 700; color: var(--primary-purple); margin-top: 10px;">Gemini Vision 審核中...</span>
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 1.4rem; color: #fff; margin-bottom: 8px;"></i>
+                    <span style="font-size: 0.72rem; font-weight: 700; color: #fff;">Gemini Vision 審核中...</span>
                   </div>
-                  <pre class="ai-console-log" id="ai-log-text-${quest.id}" style="width: 100%; max-height: 140px; overflow-y: auto; background-color: #1e1e1e; color: #a6e22e; font-family: monospace; font-size: 0.58rem; padding: 8px; border-radius: 8px; margin-top: 12px; text-align: left; white-space: pre-wrap; line-height: 1.4; box-sizing: border-box;"></pre>
+                  <pre class="ai-console-log" id="ai-log-text-${quest.id}" style="width: 100%; max-height: 140px; overflow-y: auto; background-color: #1e1e1e; color: #a6e22e; font-family: monospace; font-size: 0.58rem; padding: 8px; border-radius: 8px; margin-top: 10px; text-align: left; white-space: pre-wrap; line-height: 1.4; box-sizing: border-box;"></pre>
                 </div>
               </div>
             </div>
