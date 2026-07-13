@@ -382,7 +382,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  z-index: 100;
+  z-index: 150;
 }
 
 .iphone-notch .camera {
@@ -480,6 +480,12 @@ body {
   z-index: 120; /* 保持在最上層 */
   background-color: transparent;
   flex-shrink: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.phone-status-bar.island-active {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .phone-status-bar .time {
@@ -1768,6 +1774,8 @@ body {
   font-family: var(--font-family);
   font-size: 0.8rem;
   padding: 0.5rem;
+  height: 38px;
+  box-sizing: border-box;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background-color: var(--bg-phone-screen);

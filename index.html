@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>燎原智庫・點燃同行 - 網頁版 Prototype</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>">
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -379,31 +380,8 @@
                     <h4>熱門商圈任務推薦</h4>
                   </div>
                   
-                  <div class="recommended-quests">
-                    <!-- 任務 1 -->
-                    <div class="quest-recommend-item">
-                      <div class="quest-icon bg-orange"><i class="fa-solid fa-map-location-dot"></i></div>
-                      <div class="quest-desc">
-                        <div class="name">地下鐵尋寶趣 (文創選物)</div>
-                        <div class="loc"><i class="fa-solid fa-location-dot"></i> 台大醫院站 · 文創選物🎨</div>
-                      </div>
-                      <div class="quest-action">
-                        <span class="points">+80 pt</span>
-                        <button class="btn btn-xs btn-purple btn-accept-quest" data-title="地下鐵尋寶趣" data-points="80" data-station="台大醫院" data-category="文創選物🎨">接受</button>
-                      </div>
-                    </div>
-                    <!-- 任務 2 -->
-                    <div class="quest-recommend-item">
-                      <div class="quest-icon bg-red"><i class="fa-solid fa-utensils"></i></div>
-                      <div class="quest-desc">
-                        <div class="name">夜市美食聚點 (飲料店)</div>
-                        <div class="loc"><i class="fa-solid fa-location-dot"></i> 行天宮站 · 飲料店🥤</div>
-                      </div>
-                      <div class="quest-action">
-                        <span class="points">+150 pt</span>
-                        <button class="btn btn-xs btn-purple btn-accept-quest" data-title="夜市美食聚點" data-points="150" data-station="行天宮" data-category="飲料店🥤">接受</button>
-                      </div>
-                    </div>
+                  <div class="recommended-quests" id="recommended-quests-container">
+                    <!-- 由 JS 動態隨機渲染與更新 -->
                   </div>
                 </div>
               </div>
@@ -506,6 +484,21 @@
           <label for="invite-phone">受邀人手機號碼：</label>
           <input type="tel" id="invite-phone" placeholder="例如：0912345678" class="form-input">
         </div>
+        <!-- 性別與年齡並排對齊欄位 -->
+        <div style="display: flex; gap: 12px; margin-top: 0.8rem;">
+          <div class="form-group" style="flex: 1; margin-top: 0;">
+            <label for="invite-gender">性別：</label>
+            <select id="invite-gender" class="form-input" style="width: 100%;">
+              <option value="男">男</option>
+              <option value="女">女</option>
+              <option value="多元性別">多元性別</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1; margin-top: 0;">
+            <label for="invite-age">年齡：</label>
+            <input type="number" id="invite-age" placeholder="例如：25" class="form-input" min="1" max="120" style="width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
         <div class="form-group">
           <label for="invite-relation">關係設定：</label>
           <select id="invite-relation" class="form-input">
@@ -558,6 +551,46 @@
   </div>
 
 
+
+  <!-- 彈窗 3：編輯成員屬性 -->
+  <div class="modal-backdrop" id="edit-member-modal" style="display: none; align-items: center; justify-content: center; z-index: 1000;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-pen text-teal"></i> 編輯成員屬性</h3>
+        <button class="btn-close" id="btn-close-edit-member"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-member-index">
+        <div class="form-group">
+          <label for="edit-member-name">成員姓名：</label>
+          <input type="text" id="edit-member-name" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="edit-member-phone">手機號碼：</label>
+          <input type="tel" id="edit-member-phone" class="form-input">
+        </div>
+        <!-- 性別與年齡並排對齊欄位 -->
+        <div style="display: flex; gap: 12px; margin-top: 0.8rem;">
+          <div class="form-group" style="flex: 1; margin-top: 0;">
+            <label for="edit-member-gender">性別：</label>
+            <select id="edit-member-gender" class="form-input" style="width: 100%;">
+              <option value="男">男</option>
+              <option value="女">女</option>
+              <option value="多元性別">多元性別</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1; margin-top: 0;">
+            <label for="edit-member-age">年齡：</label>
+            <input type="number" id="edit-member-age" placeholder="例如：25" class="form-input" min="1" max="120" style="width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-edit-member">取消</button>
+        <button class="btn btn-teal" id="btn-submit-edit-member">儲存修改</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 系統頂部 Toast 通告容器 -->
   <div id="toast-container" class="toast-container"></div>

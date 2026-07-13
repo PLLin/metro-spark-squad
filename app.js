@@ -1,29 +1,55 @@
 /* ==========================================================================
    1. 狀態與常數設定
    ========================================================================== */
+/**
+ * 隨機產生一個限時任務 (包含隨機名稱、站點、特約類型與點數)
+ */
+function generateRandomQuest(id = "default-quest") {
+  // 定義 3 組固定的任務主題與分類的配對，確保標題、內容與店家類型 100% 吻合！
+  const questPool = [
+    { title: "雙人週末出遊", category: "咖啡廳☕", baseReward: 250 },
+    { title: "地下鐵尋寶趣", category: "文創選物🎨", baseReward: 80 },
+    { title: "夜市美食聚點", category: "飲料店🥤", baseReward: 150 }
+  ];
+  
+  const stations = ["中山", "台大醫院", "行天宮", "忠孝復興", "西門"];
+  
+  // 隨機挑選一組主題配對
+  const selectedTheme = questPool[Math.floor(Math.random() * questPool.length)];
+  // 隨機挑選車站
+  const randomStation = stations[Math.floor(Math.random() * stations.length)];
+  
+  // 隨機微調點數 (+- 20pt，保持趣味性)
+  const offset = (Math.floor(Math.random() * 5) - 2) * 10; // -20, -10, 0, 10, 20
+  const finalReward = Math.max(50, selectedTheme.baseReward + offset);
+  
+  return {
+    id: id,
+    title: selectedTheme.title,
+    station: randomStation,
+    category: selectedTheme.category,
+    reward: finalReward,
+    step: 1, // 預設步驟：1 (尚未出站)
+    timerSeconds: 10800, // 3小時
+    riders: [],
+    invitees: [],
+    isExpanded: true
+  };
+}
+
 const STATE = {
   personalPoints: 5820,
   vaultPoints: 12480,
   vaultTarget: 15000,
   members: [
-    { name: "我", points: 5820, color: "bg-blue", max: 6500 },
-    { name: "楊小芸 (伴侶)", points: 4310, color: "bg-pink", max: 6500 },
-    { name: "陳阿明 (好友)", points: 2350, color: "bg-green", max: 6500 }
+    { name: "我", phone: "0912345678", gender: "男", age: 28, points: 5820, color: "bg-blue", max: 6500 },
+    { name: "楊小芸 (伴侶)", phone: "0987654321", gender: "女", age: 25, points: 4310, color: "bg-pink", max: 6500 },
+    { name: "陳阿明 (好友)", phone: "0976543210", gender: "男", age: 30, points: 2350, color: "bg-green", max: 6500 }
   ],
   questActive: true,
   // 進行中的任務列表，支持多個任務同時進行
   activeQuests: [
-    {
-      id: "default-quest",
-      title: "雙人週末中山站出遊",
-      station: "中山",
-      category: "咖啡廳☕",
-      reward: 250,
-      step: 3, // 預設步驟：3 (上傳收據)
-      timerSeconds: 8073,
-      riders: ["我", "楊小芸 (伴侶)"],
-      invitees: []
-    }
+    generateRandomQuest("default-quest")
   ],
   questTimerSeconds: 8073, // 2小時14分33秒
   simulatedTripUnlocked: false,
@@ -80,33 +106,23 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("invite-modal").style.display = "flex";
       document.getElementById("invite-name").value = "王大同";
       document.getElementById("invite-phone").value = "0987654321";
+      document.getElementById("invite-gender").value = "男";
+      document.getElementById("invite-age").value = "30";
       document.getElementById("invite-relation").value = "戰友";
     }, 200);
   });
 
   document.getElementById("btn-interactive-quest").addEventListener("click", () => {
-    // 為了展示乘車模擬，如果預設任務已經完成，重置其步驟為 1 (未出站)
-    let target = STATE.activeQuests.find(q => q.station === "中山");
-    if (target) {
-      target.step = 1;
-    } else {
-      // 如果沒有中山任務，自動加一個
-      target = {
-        id: "default-quest",
-        title: "雙人週末中山站出遊",
-        station: "中山",
-        category: "咖啡廳☕",
-        reward: 250,
-        step: 1,
-        timerSeconds: 8073,
-        riders: ["我", "楊小芸 (伴侶)"],
-        invitees: [],
-        isExpanded: true
-      };
+    // 取得當前第一個任務 (初始任務) 進行動態試用
+    let target = STATE.activeQuests[0];
+    if (!target) {
+      target = generateRandomQuest("default-quest");
       STATE.activeQuests.push(target);
     }
     
-    // 收合其他所有任務，展開中山任務
+    target.step = 1; // 重置為步驟 1
+    
+    // 收合其他所有任務，展開當前任務
     STATE.activeQuests.forEach(q => {
       q.isExpanded = (q.id === target.id);
     });
@@ -114,9 +130,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     switchTab('home');
     setTimeout(() => {
-      // 自動設起點台北車站，終點中山站
+      // 同步設定終點站為該任務的目標站點
       document.getElementById("sim-start-station").value = "台北車站";
-      document.getElementById("sim-end-station").value = "中山";
+      
+      const endSelector = document.getElementById("sim-end-station");
+      if (endSelector) {
+        // 尋找對應的選項並選中它
+        for (let i = 0; i < endSelector.options.length; i++) {
+          if (endSelector.options[i].value.includes(target.station)) {
+            endSelector.selectedIndex = i;
+            break;
+          }
+        }
+      }
       
       // 自動選取第二位成員 (楊小芸) 模擬雙人同行
       const checkboxes = document.querySelectorAll('input[name="sim-companion-check"]');
@@ -134,28 +160,16 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("btn-interactive-vision").addEventListener("click", () => {
-    let quest = STATE.activeQuests.find(q => q.station === "中山");
+    let quest = STATE.activeQuests[0];
     if (!quest) {
-      // 如果沒有中山任務，自動建立一個
-      quest = {
-        id: "default-quest",
-        title: "雙人週末中山站出遊",
-        station: "中山",
-        category: "咖啡廳☕",
-        reward: 250,
-        step: 3,
-        timerSeconds: 8073,
-        riders: ["我", "楊小芸 (伴侶)"],
-        invitees: [],
-        isExpanded: true
-      };
+      quest = generateRandomQuest("default-quest");
       STATE.activeQuests.push(quest);
     }
     
-    // 強制將中山任務設為步驟三，以供收據驗證展示
+    // 強制將該任務設為步驟三，以供收據驗證展示
     quest.step = 3;
     
-    // 收合其他所有任務，展開中山任務
+    // 收合其他所有任務，展開當前任務
     STATE.activeQuests.forEach(q => {
       q.isExpanded = (q.id === quest.id);
     });
@@ -196,16 +210,70 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-cancel-invite").addEventListener("click", closeInviteModal);
   document.getElementById("btn-submit-invite").addEventListener("click", submitInvite);
 
-  // 接受任務按鈕
-  document.querySelectorAll(".btn-accept-quest").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      const title = e.currentTarget.getAttribute("data-title");
-      const points = e.currentTarget.getAttribute("data-points");
-      const station = e.currentTarget.getAttribute("data-station");
-      const category = e.currentTarget.getAttribute("data-category") || "咖啡廳☕";
-      acceptNewQuest(title, points, station, category);
-    });
+  // 編輯成員屬性彈窗事件綁定
+  document.getElementById("btn-close-edit-member").addEventListener("click", () => {
+    document.getElementById("edit-member-modal").style.display = "none";
   });
+  document.getElementById("btn-cancel-edit-member").addEventListener("click", () => {
+    document.getElementById("edit-member-modal").style.display = "none";
+  });
+  document.getElementById("btn-submit-edit-member").addEventListener("click", () => {
+    const idx = parseInt(document.getElementById("edit-member-index").value);
+    const name = document.getElementById("edit-member-name").value.trim();
+    const phone = document.getElementById("edit-member-phone").value.trim();
+    const gender = document.getElementById("edit-member-gender").value;
+    const ageVal = document.getElementById("edit-member-age").value.trim();
+    const age = parseInt(ageVal);
+    
+    if (!name) {
+      alert("請輸入姓名！");
+      return;
+    }
+    if (!phone || !/^09\d{8}$/.test(phone)) {
+      alert("請輸入正確的手機號碼 (格式：09xxxxxxxx)！");
+      return;
+    }
+    if (isNaN(age) || age < 1 || age > 120) {
+      alert("請輸入正確的年齡 (1 ~ 120)！");
+      return;
+    }
+    
+    // 更新成員屬性
+    const m = STATE.members[idx];
+    m.name = name;
+    m.phone = phone;
+    m.gender = gender;
+    m.age = age;
+    
+    document.getElementById("edit-member-modal").style.display = "none";
+    showToast("修改成功", `✨ 成員 ${name} 的屬性已成功更新！`, "teal");
+    
+    renderMemberList();
+    renderSimCompanions(); // 更新首頁模擬器中的姓名
+    renderActiveQuests(); // 更新任務大廳中的姓名
+  });
+
+  // 任務推薦區接受任務 (事件委派，支援動態重新整理)
+  const recommendedQuestsContainer = document.getElementById("recommended-quests-container");
+  if (recommendedQuestsContainer) {
+    recommendedQuestsContainer.addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-accept-quest");
+      if (btn) {
+        const title = btn.getAttribute("data-title");
+        const points = btn.getAttribute("data-points");
+        const station = btn.getAttribute("data-station");
+        const category = btn.getAttribute("data-category") || "咖啡廳☕";
+        
+        acceptNewQuest(title, points, station, category);
+        
+        // 接受完畢後，即時重新隨機換推薦任務！
+        renderRecommendedQuests();
+      }
+    });
+  }
+
+  // 初始渲染推薦任務
+  renderRecommendedQuests();
 
   // 初始化時間顯示
   updateStatusTime();
@@ -255,36 +323,47 @@ function triggerRideSimulation() {
       return;
     }
 
-    // 只要有對應任務，不論單人或多人皆解鎖該任務的步驟三！
-    const countPrefix = riderCount === 1 ? "個人" : (riderCount === 2 ? "雙人" : (riderCount === 3 ? "三人" : "多人"));
-    updateIsland(`👥 偵測到${countPrefix}同行意圖 (94%)`, "active purple");
-    showToast("Vertex AI 驗證成功", `結合票證軌跡比對，已解鎖「${targetQuest.title}」之特約商家步驟！`, "purple");
-    
-    // 更新任務狀態與點數獎勵
-    targetQuest.step = 3;
-    targetQuest.timerSeconds = 7200 + Math.floor(Math.random() * 3600); // 隨機倒數 2.x 小時
-    
-    // 如果是多人同行，提升獎勵點數！
-    targetQuest.reward = riderCount === 1 ? targetQuest.reward : (riderCount === 2 ? 250 : (riderCount === 3 ? 400 : 550));
-    targetQuest.riders = riderIndices.map(idx => STATE.members[idx].name);
-    
-    // 自動將該更新的任務展開，其它任務收起
-    STATE.activeQuests.forEach(q => {
-      q.isExpanded = (q.id === targetQuest.id);
-    });
+    // 只有在多人同行 (riderCount > 1) 時，才能解鎖共同出站任務步驟！
+    if (riderCount > 1) {
+      const countPrefix = riderCount === 2 ? "雙人" : (riderCount === 3 ? "三人" : "多人");
+      updateIsland(`👥 偵測到${countPrefix}同行意圖 (94%)`, "active purple");
+      showToast("Vertex AI 驗證成功", `結合票證軌跡比對，已解鎖「${targetQuest.title}」之特約商家步驟！`, "purple");
+      
+      // 更新任務狀態與點數獎勵
+      targetQuest.step = 3;
+      targetQuest.timerSeconds = 7200 + Math.floor(Math.random() * 3600); // 隨機倒數 2.x 小時
+      
+      // 根據實際乘車人數提升獎勵點數！
+      targetQuest.reward = riderCount === 2 ? 250 : (riderCount === 3 ? 400 : 550);
+      targetQuest.riders = riderIndices.map(idx => STATE.members[idx].name);
+      
+      // 自動將該更新的任務展開，其它任務收起
+      STATE.activeQuests.forEach(q => {
+        q.isExpanded = (q.id === targetQuest.id);
+      });
 
-    // 重新渲染所有的進行中任務卡
-    renderActiveQuests();
+      // 重新渲染所有的進行中任務卡
+      renderActiveQuests();
 
-    // 顯示任務大廳導覽列紅點提示
-    const navDot = document.getElementById("nav-quest-dot");
-    if (navDot) navDot.classList.add("active");
+      // 顯示任務大廳導覽列紅點提示
+      const navDot = document.getElementById("nav-quest-dot");
+      if (navDot) navDot.classList.add("active");
 
-    // 自動切換到任務頁籤，讓使用者方便看
-    setTimeout(() => {
-      switchTab("quest");
-    }, 1000);
+      // 自動切換到任務頁籤，讓使用者方便看
+      setTimeout(() => {
+        switchTab("quest");
+      }, 1000);
+    } else {
+      // 個人通勤：不推進共同任務，只發放基本通勤點數並提示
+      updateIsland("個人通勤 +15 pt", "active success");
+      showToast("個人通勤點數發放", `偵測到單人出站，發放基礎回饋 +15 pt。`, "teal");
+      showToast("未滿足同行條件", `⚠️ 本次出站為個人通勤，未滿足「共同出站」之任務條件。請在乘車時勾選同行戰友！`, "gold");
+      addPoints(15, 0); // 加 15 點給個人(成員0)
 
+      // 記錄本次出站的單人成員，以便在步驟一卡片上顯示其為 已出站 ✓
+      targetQuest.riders = riderIndices.map(idx => STATE.members[idx].name);
+      renderActiveQuests(); // 重新更新任務列表顯示狀態
+    }
   }, 1500);
 }
 
@@ -512,14 +591,22 @@ function animateNumber(elementId, start, end, suffix = "", duration = 600) {
 function updateIsland(message, typeClasses = "active") {
   const island = document.getElementById("phone-dynamic-island");
   const islandText = island.querySelector(".island-text");
+  const statusBar = document.querySelector(".phone-status-bar");
   
   island.className = `dynamic-island ${typeClasses}`;
   islandText.innerText = message;
+
+  if (statusBar && typeClasses.includes("active")) {
+    statusBar.classList.add("island-active");
+  }
 
   // 3.5秒後收回動態島
   setTimeout(() => {
     island.className = "dynamic-island";
     islandText.innerText = "系統運作中";
+    if (statusBar) {
+      statusBar.classList.remove("island-active");
+    }
   }, 4500);
 }
 
@@ -705,9 +792,16 @@ function submitInvite() {
   const name = document.getElementById("invite-name").value.trim() || "受邀人";
   const phone = document.getElementById("invite-phone").value.trim();
   const relation = document.getElementById("invite-relation").value;
+  const gender = document.getElementById("invite-gender").value;
+  const ageVal = document.getElementById("invite-age").value.trim();
+  const age = ageVal ? parseInt(ageVal) : (20 + Math.floor(Math.random() * 15));
   
   if (!phone || !/^09\d{8}$/.test(phone)) {
     alert("請輸入正確的手機號碼 (格式：09xxxxxxxx)！");
+    return;
+  }
+  if (ageVal && (isNaN(age) || age < 1 || age > 120)) {
+    alert("請輸入正確的年齡 (1 ~ 120)！");
     return;
   }
 
@@ -727,6 +821,9 @@ function submitInvite() {
     
     STATE.members.push({
       name: `${name} (${relation})`,
+      phone: phone,
+      gender: gender,
+      age: age,
       points: newPoints,
       color: color,
       max: 6500
@@ -788,11 +885,21 @@ function renderMemberList() {
     const mPercent = Math.min(Math.round((m.points / m.max) * 100), 100);
     const item = document.createElement("div");
     item.className = "member-item";
+    
+    const genderStr = m.gender || "男";
+    const ageStr = m.age ? `${m.age}歲` : "25歲";
+    
     item.innerHTML = `
       <div class="member-avatar ${m.color}">${initials}</div>
       <div class="member-info">
-        <span class="member-name">${m.name}</span>
-        <div class="member-progress-container">
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <span class="member-name" style="font-weight: 700; color: var(--text-dark);">${m.name}</span>
+          <span style="font-size: 0.58rem; color: var(--text-muted); background-color: #f1f1f1; padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 2px;">
+            ${genderStr} · ${ageStr}
+          </span>
+          <a href="javascript:void(0)" class="btn-edit-member" data-index="${idx}" style="color: var(--primary-teal); font-size: 0.72rem; margin-left: 2px; text-decoration: none; cursor: pointer;" title="編輯成員屬性"><i class="fa-solid fa-pen"></i></a>
+        </div>
+        <div class="member-progress-container" style="margin-top: 4px;">
           <div class="member-progress-bar ${m.color}" style="width: ${mPercent}%"></div>
         </div>
       </div>
@@ -801,6 +908,23 @@ function renderMemberList() {
       </div>
     `;
     list.appendChild(item);
+  });
+
+  // 重新綁定編輯成員點擊事件
+  list.querySelectorAll(".btn-edit-member").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.getAttribute("data-index"));
+      const m = STATE.members[idx];
+      
+      document.getElementById("edit-member-index").value = idx;
+      document.getElementById("edit-member-name").value = m.name;
+      document.getElementById("edit-member-phone").value = m.phone || "";
+      document.getElementById("edit-member-gender").value = m.gender || "男";
+      document.getElementById("edit-member-age").value = m.age || 25;
+      
+      document.getElementById("edit-member-modal").style.display = "flex";
+    });
   });
 
   // 2. 渲染顯眼的邀請入口卡片（虛線邊框與高亮按鈕效果）
@@ -827,6 +951,11 @@ function renderMemberList() {
   `;
   
   inviteItem.addEventListener("click", () => {
+    document.getElementById("invite-name").value = "";
+    document.getElementById("invite-phone").value = "";
+    document.getElementById("invite-gender").value = "男";
+    document.getElementById("invite-age").value = "";
+    document.getElementById("invite-relation").value = "家庭";
     document.getElementById("invite-modal").style.display = "flex";
   });
   
@@ -839,7 +968,7 @@ function renderMemberList() {
     inviteItem.style.backgroundColor = "rgba(0, 137, 123, 0.03)";
     inviteItem.style.transform = "scale(1)";
   });
-  
+
   list.appendChild(inviteItem);
 }
 
@@ -938,9 +1067,9 @@ function resetDemoToInitial() {
   STATE.vaultPoints = 12480;
   STATE.vaultTarget = 15000;
   STATE.members = [
-    { name: "我", points: 5820, color: "bg-blue", max: 6500 },
-    { name: "楊小芸 (伴侶)", points: 4310, color: "bg-pink", max: 6500 },
-    { name: "陳阿明 (好友)", points: 2350, color: "bg-green", max: 6500 }
+    { name: "我", phone: "0912345678", gender: "男", age: 28, points: 5820, color: "bg-blue", max: 6500 },
+    { name: "楊小芸 (伴侶)", phone: "0987654321", gender: "女", age: 25, points: 4310, color: "bg-pink", max: 6500 },
+    { name: "陳阿明 (好友)", phone: "0976543210", gender: "男", age: 30, points: 2350, color: "bg-green", max: 6500 }
   ];
   STATE.questActive = true;
   STATE.questStep = 3;
@@ -956,21 +1085,12 @@ function resetDemoToInitial() {
   // 3. 隱藏結算彈窗
   document.getElementById("settlement-modal").style.display = "none";
 
-  // 4. 重置任務大廳 UI 狀態為預設的步驟 3 (中山站)
+  // 4. 重置任務大廳 UI 狀態為隨機產生的步驟 1 任務
   STATE.activeQuests = [
-    {
-      id: "default-quest",
-      title: "雙人週末中山站出遊",
-      station: "中山",
-      category: "咖啡廳☕",
-      reward: 250,
-      step: 3, // 預設步驟：3 (上傳收據)
-      timerSeconds: 8073,
-      riders: ["我", "楊小芸 (伴侶)"],
-      invitees: []
-    }
+    generateRandomQuest("default-quest")
   ];
   renderActiveQuests();
+  renderRecommendedQuests();
 
   // 重置首頁輸入值
   document.getElementById("sim-start-station").value = "台北車站";
@@ -1160,31 +1280,40 @@ function renderActiveQuests() {
     const pad = (num) => String(num).padStart(2, "0");
     const timerStr = `剩餘 ${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
     
-    // 生成隊員狀態 HTML
+    // 生成隊員狀態 HTML (若在步驟 1 且有部分成員已出站，動態呈現該成員已出站 ✓)
     let membersHtml = "";
-    if (quest.step === 1) {
-      STATE.members.forEach(m => {
-        const initials = m.name.charAt(0);
+    STATE.members.forEach(m => {
+      const initials = m.name.charAt(0);
+      const isRider = quest.riders.some(r => r.startsWith(m.name.split(" ")[0]));
+      
+      if (isRider) {
         membersHtml += `
-          <div class="m-status-item status-riding">
+          <div class="m-status-item status-completed">
             <span class="m-dot ${m.color}">${initials}</span>
-            <span class="m-label">搭乘中 ➔</span>
+            <span class="m-label">已出站 ✓</span>
           </div>
         `;
-      });
-    } else {
-      STATE.members.forEach(m => {
-        const initials = m.name.charAt(0);
-        const isRider = quest.riders.some(r => r.startsWith(m.name.split(" ")[0]));
-        const statusClass = isRider ? "status-completed" : "status-inactive";
-        const statusText = isRider ? "已出站 ✓" : "未參與";
-        membersHtml += `
-          <div class="m-status-item ${statusClass}">
-            <span class="m-dot ${m.color}">${initials}</span>
-            <span class="m-label">${statusText}</span>
-          </div>
-        `;
-      });
+      } else {
+        if (quest.step === 1) {
+          membersHtml += `
+            <div class="m-status-item status-riding">
+              <span class="m-dot ${m.color}">${initials}</span>
+              <span class="m-label">搭乘中 ➔</span>
+            </div>
+          `;
+        } else {
+          membersHtml += `
+            <div class="m-status-item status-inactive">
+              <span class="m-dot ${m.color}">${initials}</span>
+              <span class="m-label">未參與</span>
+            </div>
+          `;
+        }
+      }
+    });
+    
+    // 渲染被邀請的人 (如果是步驟 3 以上才渲染)
+    if (quest.step >= 3) {
       quest.invitees.forEach(name => {
         const initials = name.charAt(0);
         membersHtml += `
@@ -1230,6 +1359,10 @@ function renderActiveQuests() {
             <span>${quest.title}</span>
             <span style="font-size: 0.72rem; color: var(--primary-purple); font-weight: 700; background-color: rgba(106, 27, 154, 0.05); padding: 2px 6px; border-radius: 4px;">+${quest.reward} pt</span>
           </h3>
+          <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+            <i class="fa-solid fa-location-dot" style="color: var(--primary-purple); font-size: 0.68rem;"></i>
+            <span>${quest.station}站 · ${quest.category}</span>
+          </div>
         </div>
 
         <!-- 可收合任務主體 -->
@@ -1376,4 +1509,73 @@ function renderActiveQuests() {
       });
     }
   });
+}
+
+/**
+ * 動態隨機生成與渲染推薦任務
+ */
+function renderRecommendedQuests() {
+  const container = document.getElementById("recommended-quests-container");
+  if (!container) return;
+  
+  // 定義 3 組任務主題與分類配對
+  const questPool = [
+    { title: "雙人週末出遊", category: "咖啡廳☕", baseReward: 250, iconClass: "fa-mug-hot", bgClass: "bg-orange" },
+    { title: "地下鐵尋寶趣", category: "文創選物🎨", baseReward: 80, iconClass: "fa-map-location-dot", bgClass: "bg-orange" },
+    { title: "夜市美食聚點", category: "飲料店🥤", baseReward: 150, iconClass: "fa-utensils", bgClass: "bg-red" }
+  ];
+  
+  const stations = ["中山", "台大醫院", "行天宮", "忠孝復興", "西門"];
+  let html = "";
+  
+  // 隨機抽選 2 個不重複的主題配對
+  let selectedIndices = [];
+  while (selectedIndices.length < 2) {
+    const idx = Math.floor(Math.random() * questPool.length);
+    if (!selectedIndices.includes(idx)) {
+      selectedIndices.push(idx);
+    }
+  }
+  
+  // 隨機分配不重複的車站
+  let selectedStations = [];
+  selectedIndices.forEach(idx => {
+    const theme = questPool[idx];
+    
+    // 篩選出目前尚未被其它推薦任務選取的車站
+    let availableStations = stations.filter(s => !selectedStations.includes(s));
+    
+    // 儘量避開進行中的任務站點，增加多樣性
+    let preferredStations = availableStations.filter(s => !STATE.activeQuests.some(q => q.station === s));
+    if (preferredStations.length === 0) {
+      preferredStations = availableStations; // 沒得選時就用剩餘可用的
+    }
+    
+    const randomStation = preferredStations[Math.floor(Math.random() * preferredStations.length)];
+    selectedStations.push(randomStation);
+    
+    // 微調點數
+    const offset = (Math.floor(Math.random() * 5) - 2) * 10;
+    const reward = Math.max(50, theme.baseReward + offset);
+    
+    html += `
+      <div class="quest-recommend-item">
+        <div class="quest-icon ${theme.bgClass}"><i class="fa-solid ${theme.iconClass}"></i></div>
+        <div class="quest-desc">
+          <div class="name">${theme.title}</div>
+          <div class="loc"><i class="fa-solid fa-location-dot"></i> ${randomStation}站 · ${theme.category}</div>
+        </div>
+        <div class="quest-action">
+          <span class="points">+${reward} pt</span>
+          <button class="btn btn-xs btn-purple btn-accept-quest" 
+            data-title="${theme.title}" 
+            data-points="${reward}" 
+            data-station="${randomStation}" 
+            data-category="${theme.category}">接受</button>
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
 }
