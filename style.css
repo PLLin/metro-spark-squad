@@ -2091,6 +2091,7 @@ body {
 .workflow-step:nth-child(1)::before { border-color: var(--primary-teal); }
 .workflow-step:nth-child(2)::before { border-color: var(--primary-purple); }
 .workflow-step:nth-child(3)::before { border-color: var(--gold); }
+.workflow-step:nth-child(4)::before { border-color: #1e88e5; }
 
 .step-badge {
   font-size: 0.65rem;
@@ -2118,6 +2119,12 @@ body {
   background: rgba(249, 168, 37, 0.15);
   color: #ffb300;
   border: 1px solid rgba(249, 168, 37, 0.3);
+}
+
+.step-badge.badge-blue {
+  background: rgba(30, 136, 229, 0.15);
+  color: #42a5f5;
+  border: 1px solid rgba(30, 136, 229, 0.3);
 }
 
 .workflow-step h4 {
@@ -2187,6 +2194,19 @@ body {
   color: #000;
   border-color: var(--gold);
   box-shadow: 0 0 12px rgba(249, 168, 37, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-trial-blue {
+  background: rgba(30, 136, 229, 0.08);
+  color: #42a5f5;
+  border-color: rgba(30, 136, 229, 0.3);
+}
+.btn-trial-blue:hover {
+  background: #1e88e5;
+  color: #fff;
+  border-color: #1e88e5;
+  box-shadow: 0 0 12px rgba(30, 136, 229, 0.4);
   transform: translateY(-1px);
 }
 
