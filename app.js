@@ -308,10 +308,30 @@ function triggerRideSimulation() {
     // 檢查是否有匹配該目的地站點的進行中任務
     const matchingQuest = STATE.activeQuests.find(q => q.station === cleanEndSt);
     if (!matchingQuest) {
-      // 普通個人通勤，發放基礎個人通勤回饋！
-      updateIsland("個人通勤 +15 pt", "active success");
-      showToast("個人通勤點數發放", `偵測到單人出站，發放基礎回饋 +15 pt。`, "teal");
-      addPoints(15, 0);
+      const riderNames = riderIndices.map(idx => STATE.members[idx].name.split(" ")[0]).join("、");
+      const totalPoints = 15 * riderCount;
+      
+      if (riderCount === 1) {
+        // 普通個人通勤，發放基礎個人通勤回饋！
+        updateIsland("個人通勤 +15 pt", "active success");
+        showToast("個人通勤點數發放", `偵測到單人出站，發放基礎回饋 +15 pt。`, "teal");
+        addPoints(15, 0);
+        
+        // 寫入金庫明細交易日誌
+        insertVaultLog("個人通勤回饋 (我)", `剛剛 · ${startSt} ➔ ${endSt}`, "+15 pt", "positive", "fa-train-subway", "bg-light-green", "text-green");
+      } else {
+        // 多人同行通勤，發放每人基礎回饋！
+        updateIsland(`👥 同行出站 +${totalPoints} pt`, "active success");
+        showToast("捷運同行回饋", `偵測到 ${riderCount} 人同行出站，發放每人基礎回饋 +15 pt (共 +${totalPoints} pt)！`, "teal");
+        
+        // 每一位乘車隊員增加點數
+        riderIndices.forEach(idx => {
+          addPoints(15, idx);
+        });
+        
+        // 寫入金庫明細交易日誌 (包含同行所有人姓名)
+        insertVaultLog(`捷運同行回饋 (${riderNames})`, `剛剛 · ${startSt} ➔ ${endSt}`, `+${totalPoints} pt`, "positive", "fa-people-group", "bg-light-green", "text-green");
+      }
       return;
     }
     
@@ -349,6 +369,16 @@ function triggerRideSimulation() {
       const navDot = document.getElementById("nav-quest-dot");
       if (navDot) navDot.classList.add("active");
 
+      // 根據實際人數，每人發放基礎通勤回饋 +15 pt (共 +30 / +45 pt)
+      const baseCommutePoints = 15 * riderCount;
+      riderIndices.forEach(idx => {
+        addPoints(15, idx);
+      });
+
+      // 寫入金庫明細交易日誌 (包含同行所有人姓名，顯示獲得的乘車基礎回饋)
+      const riderNames = riderIndices.map(idx => STATE.members[idx].name.split(" ")[0]).join("、");
+      insertVaultLog(`戰隊共同出站 (${riderNames})`, `剛剛 · ${startSt} ➔ ${endSt} 乘車抵達`, `+${baseCommutePoints} pt`, "positive", "fa-people-group", "bg-light-purple", "text-purple");
+
       // 自動切換到任務頁籤，讓使用者方便看
       setTimeout(() => {
         switchTab("quest");
@@ -363,6 +393,9 @@ function triggerRideSimulation() {
       // 記錄本次出站的單人成員，以便在步驟一卡片上顯示其為 已出站 ✓
       targetQuest.riders = riderIndices.map(idx => STATE.members[idx].name);
       renderActiveQuests(); // 重新更新任務列表顯示狀態
+      
+      // 寫入金庫明細交易日誌
+      insertVaultLog("個人通勤回饋 (我)", `剛剛 · ${startSt} ➔ ${endSt}`, "+15 pt", "positive", "fa-train-subway", "bg-light-green", "text-green");
     }
   }, 1500);
 }
