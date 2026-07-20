@@ -484,7 +484,7 @@ function triggerRideSimulation() {
     // 只有在多人同行 (riderCount > 1) 時，才能解鎖共同出站任務步驟！
     if (riderCount > 1) {
       const countPrefix = riderCount === 2 ? "雙人" : (riderCount === 3 ? "三人" : "多人");
-      updateIsland(`👥 偵測到${countPrefix}同行意圖 (94%)`, "active purple");
+      updateIsland(`👥 ${countPrefix}出站，已解鎖商家`, "active purple");
       showToast("AI 驗證成功", `結合票證軌跡比對，已解鎖「${targetQuest.title}」之特約商家步驟！`, "purple");
       
       // 更新任務狀態與點數獎勵
