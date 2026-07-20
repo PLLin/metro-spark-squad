@@ -2066,7 +2066,7 @@ body {
   top: 10px;
   bottom: 10px;
   width: 2px;
-  background: linear-gradient(to bottom, var(--primary-teal) 0%, var(--primary-purple) 50%, var(--gold) 100%);
+  background: linear-gradient(to bottom, var(--primary-teal) 0%, var(--primary-purple) 33%, var(--gold) 66%, #1e88e5 100%);
   opacity: 0.3;
 }
 
@@ -2327,4 +2327,36 @@ body {
     transform-origin: center center;
     margin: -110px 0;
   }
+}
+
+/* 互動引導亮圈動畫 */
+@keyframes pulse-glowing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 137, 123, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 137, 123, 0);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 137, 123, 0);
+    transform: scale(1);
+  }
+}
+.glowing-guide {
+  animation: pulse-glowing 1.5s infinite !important;
+  border: 2px solid var(--primary-teal) !important;
+  border-radius: 8px;
+  position: relative;
+  z-index: 99;
+}
+.nav-item.glowing-guide {
+  border: none !important;
+  background-color: rgba(0, 137, 123, 0.12) !important;
+  border-radius: 50% !important;
+  animation: pulse-glowing 1.5s infinite !important;
 }

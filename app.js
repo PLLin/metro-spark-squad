@@ -7,9 +7,9 @@
 function generateRandomQuest(id = "default-quest") {
   // 定義 3 組固定的任務主題與分類的配對，確保標題、內容與店家類型 100% 吻合！
   const questPool = [
-    { title: "雙人週末出遊", category: "咖啡廳☕", baseReward: 250 },
-    { title: "地下鐵尋寶趣", category: "文創選物🎨", baseReward: 80 },
-    { title: "夜市美食聚點", category: "飲料店🥤", baseReward: 150 }
+    { title: "雙人週末出遊", category: "咖啡廳☕", baseReward: 5200 },
+    { title: "地下鐵尋寶趣", category: "文創選物🎨", baseReward: 3200 },
+    { title: "夜市美食聚點", category: "飲料店🥤", baseReward: 3200 }
   ];
   
   const stations = ["中山", "台大醫院", "行天宮", "忠孝復興", "西門"];
@@ -39,18 +39,18 @@ function generateRandomQuest(id = "default-quest") {
 
 const STATE = {
   personalPoints: 5820,
-  vaultPoints: 12480,
+  vaultPoints: 5820,
   vaultTarget: 15000,
   members: [
-    { name: "我", phone: "0912345678", gender: "男", age: 28, points: 5820, color: "bg-blue", max: 6500 },
+    { name: "我", phone: "0912345678", gender: "男", age: 28, points: 5820, color: "bg-blue", max: 6500 }
+  ],
+  contacts: [
     { name: "楊小芸 (伴侶)", phone: "0987654321", gender: "女", age: 25, points: 4310, color: "bg-pink", max: 6500 },
     { name: "陳阿明 (好友)", phone: "0976543210", gender: "男", age: 30, points: 2350, color: "bg-green", max: 6500 }
   ],
-  questActive: true,
-  // 進行中的任務列表，支持多個任務同時進行
-  activeQuests: [
-    generateRandomQuest("default-quest")
-  ],
+  questActive: false,
+  // 進行中的任務列表，支持多個任務同時進行 (初始為空，待組隊完由 AI 發派)
+  activeQuests: [],
   questTimerSeconds: 8073, // 2小時14分33秒
   simulatedTripUnlocked: false,
   questReward: 250, // 共同任務的基礎點數獎勵
@@ -70,11 +70,14 @@ document.addEventListener("DOMContentLoaded", () => {
   renderMemberList();
   renderSimCompanions();
   renderActiveQuests(); // 初始渲染進行中任務卡
+  renderHomeSimulator(); // 初始渲染首頁模擬器卡片
   updatePointsUI(false); // 初始更新介面，不播放音效/動畫
 
   // 步驟 2 摺疊面板展開收合 (動態卡片內已各自綁定，此處僅預設載入)
-  renderCooperativeShopsForQuest(STATE.activeQuests[0]); 
-
+  if (STATE.activeQuests && STATE.activeQuests.length > 0) {
+    renderCooperativeShopsForQuest(STATE.activeQuests[0]); 
+  }
+  
   // 頁籤切換
   window.switchTab = (tabId) => {
     document.querySelectorAll(".app-view").forEach(view => {
@@ -91,34 +94,135 @@ document.addEventListener("DOMContentLoaded", () => {
     const targetBtn = Array.from(document.querySelectorAll(".nav-item")).find(btn => 
       btn.getAttribute("onclick") && btn.getAttribute("onclick").includes(tabId)
     );
-    if (targetBtn) targetBtn.classList.add("active");
+    if (targetBtn) {
+      targetBtn.classList.add("active");
+      // 使用者點進該分頁了，清除該導航按鈕的引導亮圈
+      targetBtn.classList.remove("glowing-guide");
+    }
+
+    // 清除畫面上可能存在的按鈕引導亮圈 (排除金庫組隊按鈕本身)
+    document.querySelectorAll(".glowing-guide").forEach(el => {
+      if (!el.classList.contains("nav-item") && el.id !== "btn-confirm-compose-team") {
+        el.classList.remove("glowing-guide");
+      }
+    });
 
     // 如果切換到任務頁面，消掉紅點
     if (tabId === 'quest') {
-      document.getElementById("nav-quest-dot").classList.remove("active");
+      const questDot = document.getElementById("nav-quest-dot");
+      if (questDot) questDot.classList.remove("active");
+      
+      // 任務頁面引導：若有步驟三的待上傳發票任務，高亮該任務的上傳區域
+      setTimeout(() => {
+        const step3Quest = STATE.activeQuests.find(q => q.step === 3);
+        if (step3Quest) {
+          const uploadBtn = document.querySelector(`.btn-upload-receipt[data-id="${step3Quest.id}"]`);
+          if (uploadBtn) {
+            uploadBtn.classList.add("glowing-guide");
+            showToast("引導提示", "👉 請點選下方「拍攝或上傳發票收據」以啟動 AI 視覺比對驗證。", "gold");
+          }
+        }
+      }, 300);
+    }
+
+    // 如果切換到首頁，且有進行中的步驟 1 任務，高亮模擬出站按鈕
+    if (tabId === 'home') {
+      setTimeout(() => {
+        const step1Quest = STATE.activeQuests.find(q => q.step === 1);
+        if (step1Quest) {
+          const rideBtn = document.getElementById("btn-trigger-route");
+          if (rideBtn) {
+            rideBtn.classList.add("glowing-guide");
+            showToast("引導提示", "👉 勾選多人同行，點擊「模擬乘車出站」以解鎖第一階段站點抵達意圖！", "gold");
+          }
+        }
+      }, 300);
+    }
+
+    // 如果切換到金庫，且點數已達標，高亮提醒卡片按鈕，引導手動點擊
+    if (tabId === 'vault') {
+      if (STATE.vaultPoints >= STATE.vaultTarget && (STATE.questActive || STATE.members.length > 1)) {
+        setTimeout(() => {
+          const triggerSettleBtn = document.getElementById("btn-trigger-vault-settlement");
+          if (triggerSettleBtn) {
+            triggerSettleBtn.classList.add("glowing-guide");
+            showToast("引導提示", "👉 共同金庫已達標！請點擊金庫分頁中亮起的「立即執行金庫分帳結算」進行拆帳分配與重置。", "gold");
+          }
+        }, 300);
+      }
     }
   };
 
-  // 綁定整合型核心機制試用按鈕
-  document.getElementById("btn-interactive-vault").addEventListener("click", () => {
+  // 核心改造：初始狀態導引至金庫組隊頁面
+  if (STATE.contacts && STATE.contacts.length > 0) {
     switchTab('vault');
-    setTimeout(() => {
-      document.getElementById("invite-modal").style.display = "flex";
-      document.getElementById("invite-name").value = "王大同";
-      document.getElementById("invite-phone").value = "0987654321";
-      document.getElementById("invite-gender").value = "男";
-      document.getElementById("invite-age").value = "30";
-      document.getElementById("invite-relation").value = "戰友";
-    }, 200);
-  });
+    showToast("演示開始", "👋 歡迎！請先勾選組員進行「組成金庫團隊」，解鎖後續 AI 動態任務！", "teal");
+  } else {
+    switchTab('home');
+  }
+
+  // 綁定整合型核心機制試用按鈕
+  const btnVault = document.getElementById("btn-interactive-vault");
+  if (btnVault) {
+    btnVault.addEventListener("click", () => {
+      switchTab('vault');
+      setTimeout(() => {
+        document.getElementById("invite-modal").style.display = "flex";
+        document.getElementById("invite-name").value = "王大同";
+        document.getElementById("invite-phone").value = "0987654321";
+        document.getElementById("invite-gender").value = "男";
+        document.getElementById("invite-age").value = "30";
+        document.getElementById("invite-relation").value = "戰友";
+      }, 200);
+    });
+  }
+
+  // 步驟 00: 快速組成團隊
+  const btnCompose = document.getElementById("btn-interactive-compose");
+  if (btnCompose) {
+    btnCompose.addEventListener("click", () => {
+      // 1. 切換到金庫頁面
+      switchTab('vault');
+      
+      // 2. 延遲執行，確保 DOM 已渲染完畢
+      setTimeout(() => {
+        // 確保至少有一個被勾選
+        const checkboxes = document.querySelectorAll(".contact-checkbox");
+        if (checkboxes.length > 0) {
+          checkboxes.forEach(cb => {
+            cb.checked = true;
+          });
+          
+          // 找到確認組隊按鈕並觸發點擊
+          const confirmBtn = document.getElementById("btn-confirm-compose-team");
+          if (confirmBtn) {
+            confirmBtn.click();
+          }
+        } else {
+          showToast("提示", "團隊已經組成囉！可以直接進行下一步乘車模擬。", "gold");
+        }
+      }, 300);
+    });
+  }
 
   document.getElementById("btn-interactive-quest").addEventListener("click", () => {
+    // 防呆：確認是否已完成組隊 (成員數 > 1)
+    if (STATE.members.length === 1) {
+      showToast("防呆提示", "⚠️ 請先執行「步驟 00：組成團隊」！因為 AI 任務需要根據您的團隊結構與人數派發，請先點擊步驟 00 組隊。", "gold");
+      switchTab('vault');
+      
+      const btnCompose = document.getElementById("btn-interactive-compose");
+      if (btnCompose) btnCompose.classList.add("glowing-guide");
+      return;
+    }
+
     // 取得當前第一個任務 (初始任務) 進行動態試用
     let target = STATE.activeQuests[0];
     if (!target) {
       target = generateRandomQuest("default-quest");
       STATE.activeQuests.push(target);
     }
+    STATE.questActive = true;
     
     target.step = 1; // 重置為步驟 1
     
@@ -160,37 +264,45 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("btn-interactive-vision").addEventListener("click", () => {
-    let quest = STATE.activeQuests[0];
-    if (!quest) {
-      quest = generateRandomQuest("default-quest");
-      STATE.activeQuests.push(quest);
+    // 防呆 1：確認是否已完成組隊 (成員數 > 1)
+    if (STATE.members.length === 1) {
+      showToast("防呆提示", "⚠️ 請先執行「步驟 00：組成團隊」！未組隊無法進行任務與收據審核。", "gold");
+      switchTab('vault');
+      return;
     }
     
-    // 強制將該任務設為步驟三，以供收據驗證展示
-    quest.step = 3;
+    // 防呆 2：確認是否已進行乘車出站模擬 (是否有進行中任務)
+    if (STATE.activeQuests.length === 0) {
+      showToast("防呆提示", "⚠️ 請先執行「步驟 01：模擬雙人乘車」！目前尚無 AI 派發的任務，請先模擬乘車以開啟任務。", "gold");
+      switchTab('home');
+      return;
+    }
     
-    // 收合其他所有任務，展開當前任務
-    STATE.activeQuests.forEach(q => {
-      q.isExpanded = (q.id === quest.id);
-    });
-    renderActiveQuests();
-
+    // 防呆 3：檢查第一個任務狀態是否已經到達步驟 3 (是否模擬出站解鎖)
+    const quest = STATE.activeQuests[0];
+    if (quest.step < 3) {
+      showToast("防呆提示", "⚠️ 請先點選首頁右上角的「模擬出站」！目前任務尚在乘車中，抵達目的地後才能進行發票收據上傳。", "gold");
+      switchTab('home');
+      return;
+    }
+    
     switchTab('quest');
     setTimeout(() => {
       triggerReceiptSimulation(quest.id);
-    }, 300);
+    }, 200);
   });
 
   document.getElementById("btn-sim-commute").addEventListener("click", triggerCommuteSimulation);
 
   // 步驟四：滿額結算模擬
   document.getElementById("btn-interactive-settle").addEventListener("click", () => {
-    switchTab('vault');
-    setTimeout(() => {
-      // 模擬增加點數使其超過目標
-      const amountToAdd = 15050 - STATE.vaultPoints;
-      addPoints(amountToAdd, 0); // 增加點數，將會自動觸發達標彈窗
-    }, 200);
+    // 防呆：確認是否已完成組隊 (成員數 > 1)
+    if (STATE.members.length === 1) {
+      showToast("防呆提示", "⚠️ 請先執行「步驟 00：組成團隊」！只有在多人金庫的情況下，才能體驗共同點數平分與拆帳的結算流程。", "gold");
+      switchTab('vault');
+      return;
+    }
+    triggerAutoSettlement();
   });
 
   // 結算確認按鈕
@@ -238,15 +350,34 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     
-    // 更新成員屬性
-    const m = STATE.members[idx];
-    m.name = name;
-    m.phone = phone;
-    m.gender = gender;
-    m.age = age;
+    const editTypeEl = document.getElementById("edit-member-type");
+    const editType = editTypeEl ? editTypeEl.value : "member";
+
+    if (editType === "contact") {
+      // 更新聯絡人屬性
+      const c = STATE.contacts[idx];
+      const bracketMatch = c.name.match(/\(([^)]+)\)/);
+      const relationStr = bracketMatch ? ` (${bracketMatch[1]})` : "";
+      c.name = name + relationStr;
+      c.phone = phone;
+      c.gender = gender;
+      c.age = age;
+      
+      showToast("修改成功", `✨ 聯絡人 ${name} 的屬性已成功更新！`, "teal");
+    } else {
+      // 更新已加入金庫成員屬性
+      const m = STATE.members[idx];
+      const bracketMatch = m.name.match(/\(([^)]+)\)/);
+      const relationStr = bracketMatch ? ` (${bracketMatch[1]})` : "";
+      m.name = name + relationStr;
+      m.phone = phone;
+      m.gender = gender;
+      m.age = age;
+      
+      showToast("修改成功", `✨ 成員 ${name} 的屬性已成功更新！`, "teal");
+    }
     
     document.getElementById("edit-member-modal").style.display = "none";
-    showToast("修改成功", `✨ 成員 ${name} 的屬性已成功更新！`, "teal");
     
     renderMemberList();
     renderSimCompanions(); // 更新首頁模擬器中的姓名
@@ -289,6 +420,13 @@ document.addEventListener("DOMContentLoaded", () => {
  * 模擬乘車出站：觸發 AI 分析與解鎖任務
  */
 function triggerRideSimulation() {
+  // 防呆：確認是否已完成組隊 (成員數 > 1)
+  if (STATE.members.length === 1) {
+    showToast("防呆提示", "⚠️ 請先至【金庫】分頁勾選成員組成團隊！組成團隊後，AI 才能根據隊員人數與結構派發專屬任務並進行模擬。", "gold");
+    switchTab('vault');
+    return;
+  }
+
   updateIsland("正在分析通勤軌跡...", "active purple");
   showToast("捷運動態票證偵測", "系統收到捷運卡進站/出站信號...", "teal");
 
@@ -347,14 +485,14 @@ function triggerRideSimulation() {
     if (riderCount > 1) {
       const countPrefix = riderCount === 2 ? "雙人" : (riderCount === 3 ? "三人" : "多人");
       updateIsland(`👥 偵測到${countPrefix}同行意圖 (94%)`, "active purple");
-      showToast("Vertex AI 驗證成功", `結合票證軌跡比對，已解鎖「${targetQuest.title}」之特約商家步驟！`, "purple");
+      showToast("AI 驗證成功", `結合票證軌跡比對，已解鎖「${targetQuest.title}」之特約商家步驟！`, "purple");
       
       // 更新任務狀態與點數獎勵
       targetQuest.step = 3;
       targetQuest.timerSeconds = 7200 + Math.floor(Math.random() * 3600); // 隨機倒數 2.x 小時
       
-      // 根據實際乘車人數提升獎勵點數！
-      targetQuest.reward = riderCount === 2 ? 250 : (riderCount === 3 ? 400 : 550);
+      // 根據實際乘車人數提升獎勵點數，使總和自然大於 15,000 pt！
+      targetQuest.reward = riderCount === 2 ? 5200 : (riderCount === 3 ? 3200 : 4200);
       targetQuest.riders = riderIndices.map(idx => STATE.members[idx].name);
       
       // 自動將該更新的任務展開，其它任務收起
@@ -379,10 +517,14 @@ function triggerRideSimulation() {
       const riderNames = riderIndices.map(idx => STATE.members[idx].name.split(" ")[0]).join("、");
       insertVaultLog(`戰隊共同出站 (${riderNames})`, `剛剛 · ${startSt} ➔ ${endSt} 乘車抵達`, `+${baseCommutePoints} pt`, "positive", "fa-people-group", "bg-light-purple", "text-purple");
 
-      // 自動切換到任務頁籤，讓使用者方便看
+      // 核心改造：不自動跳轉，改用底部「任務」分頁引導亮圈！
       setTimeout(() => {
-        switchTab("quest");
-      }, 1000);
+        const questTabBtn = document.querySelector(".nav-item[onclick*='quest']");
+        if (questTabBtn) {
+          questTabBtn.classList.add("glowing-guide");
+        }
+        showToast("引導提示", "👉 共同出站成功！請點選底部【任務】按鈕查看已解鎖的特約商家優惠與步驟三。", "gold");
+      }, 500);
     } else {
       // 個人通勤：不推進共同任務，只發放基本通勤點數並提示
       updateIsland("個人通勤 +15 pt", "active success");
@@ -401,10 +543,7 @@ function triggerRideSimulation() {
 }
 
 /**
- * 模擬上傳收據：Gemini Vision 辨識與金庫點數注入
- */
-/**
- * 模擬上傳收據：Gemini Vision 辨識與金庫點數注入 (支持多任務參數)
+ * 模擬上傳收據：AI Vision 辨識與金庫點數注入 (支持多任務參數)
  */
 function triggerReceiptSimulation(questId) {
   // 如果沒有指定 ID，自動尋找目前第一個在步驟三的任務
@@ -421,6 +560,8 @@ function triggerReceiptSimulation(questId) {
 
   const quest = STATE.activeQuests.find(q => q.id === targetQuestId);
   if (!quest) return;
+  
+  STATE.questActive = true;
 
   // 顯示該卡片底下的掃描覆蓋動畫，並隱藏上傳按鈕區域
   const wrapper = document.getElementById("upload-wrapper-" + quest.id);
@@ -429,7 +570,7 @@ function triggerReceiptSimulation(questId) {
   if (wrapper) wrapper.style.display = "none";
   if (overlay) overlay.style.display = "flex";
   
-  // 模擬 Gemini AI 逐步辨識日誌
+  // 模擬 AI 逐步辨識日誌
   const cat = quest.category || "咖啡廳☕";
   let shopKeyword = "角樂園咖啡 (特約咖啡廳)";
   let itemKeyword = "招牌黑糖拿鐵與手工焦糖布丁";
@@ -444,12 +585,12 @@ function triggerReceiptSimulation(questId) {
 
   const rewardVal = quest.reward || 250;
   const logs = [
-    "[17:10:01] [Vertex AI] 啟動 Gemini 1.5 Flash 多模態視覺模型...",
-    "[17:10:02] [Gemini Vision] 載入影像位元流... 辨識為收據發票格式。",
-    `[17:10:02] [Gemini Vision] 掃描文字中：擷取關鍵字「${shopKeyword}」、「${quest.station}店」...`,
-    `[17:10:03] [Gemini Vision] 偵測到交易金額「$320」、消費項目「${itemKeyword}」...`,
-    `[17:10:03] [Gemini Vision] 比對消費時間與${quest.station}站出站時間，吻合度 99%！`,
-    `[17:10:04] [Vertex AI] 任務條件判定：同行乘車出站 ＋ 指定「${cat}」特約商家消費 ＝ 條件完全滿足！`,
+    "[17:10:01] [AI] 啟動 AI 多模態視覺模型...",
+    "[17:10:02] [AI Vision] 載入影像位元流... 辨識為收據發票格式。",
+    `[17:10:02] [AI Vision] 掃描文字中：擷取關鍵字「${shopKeyword}」、「${quest.station}店」...`,
+    `[17:10:03] [AI Vision] 偵測到交易金額「$320」、消費項目「${itemKeyword}」...`,
+    `[17:10:03] [AI Vision] 比對消費時間與${quest.station}站出站時間，吻合度 99%！`,
+    `[17:10:04] [AI] 任務條件判定：同行乘車出站 ＋ 指定「${cat}」特約商家消費 ＝ 條件完全滿足！`,
     `[17:10:04] [系統核發] 發放金庫點數獎勵：+${rewardVal} pt 批准送出。`
   ];
 
@@ -475,8 +616,8 @@ function triggerReceiptSimulation(questId) {
     renderActiveQuests();
 
     // 動態島顯示成功
-    updateIsland(`✓ Gemini 驗證成功！+${rewardVal} pt`, "active success");
-    showToast("Gemini 審核通過", `多模態視覺比對成功！任務完成，+${rewardVal} pt 已注入金庫。`, "purple");
+    updateIsland(`✓ AI 驗證成功！+${rewardVal} pt`, "active success");
+    showToast("AI 審核通過", `多模態視覺比對成功！任務完成，+${rewardVal} pt 已注入金庫。`, "purple");
 
     // 金庫點數增加
     addPoints(rewardVal, 0); 
@@ -486,13 +627,23 @@ function triggerReceiptSimulation(questId) {
     if (uploadBtn) spawnFloatingPoints(`+${rewardVal} pt`, uploadBtn);
     
     // 增加一筆入點明細到金庫
-    insertVaultLog(`任務完成：${quest.title}`, "剛剛 · Gemini 視覺審核收據通過", `+${rewardVal} pt`, "positive", "fa-wand-magic-sparkles", "bg-light-purple", "text-purple");
+    insertVaultLog(`任務完成：${quest.title}`, "剛剛 · AI 視覺審核收據通過", `+${rewardVal} pt`, "positive", "fa-wand-magic-sparkles", "bg-light-purple", "text-purple");
 
     // 4秒後將任務從列表中淡出移除
     setTimeout(() => {
       STATE.activeQuests = STATE.activeQuests.filter(q => q.id !== quest.id);
       renderActiveQuests();
     }, 4000);
+
+    // 核心改造：不自動跳轉，改用底部「金庫」分頁引導亮圈！
+    setTimeout(() => {
+      // 點數已經伴隨任務完成自然達標，無須額外補點！
+      const vaultTabBtn = document.querySelector(".nav-item[onclick*='vault']");
+      if (vaultTabBtn) {
+        vaultTabBtn.classList.add("glowing-guide");
+      }
+      showToast("引導提示", "👉 任務已成功挑戰！金庫點數已累計達標，請點選底部【金庫】按鈕進行金庫分帳結算並領取點數。", "gold");
+    }, 1500);
 
   }, 3200);
 }
@@ -549,6 +700,12 @@ function addPoints(amount, memberIndex) {
  * 更新進度環和所有進度條 UI
  */
 function updatePointsUI(shouldAnimate) {
+  // 更新金庫主點數顯示
+  const displayPoints = document.getElementById("vault-points-display");
+  if (displayPoints) {
+    displayPoints.innerText = STATE.vaultPoints.toLocaleString();
+  }
+
   // 1. 計算金庫達成率
   const percent = Math.min(Math.round((STATE.vaultPoints / STATE.vaultTarget) * 100), 100);
   document.getElementById("vault-percent-display").innerText = percent;
@@ -568,13 +725,32 @@ function updatePointsUI(shouldAnimate) {
   // 4. 重新渲染成員列表以更新進度條
   renderMemberList();
 
-  // 5. 檢查金庫是否已達標（超過 15,000 pt），如果是則觸發達標結算彈窗
-  if (STATE.vaultPoints >= STATE.vaultTarget) {
-    const modal = document.getElementById("settlement-modal");
-    if (modal && modal.style.display !== "flex") {
-      setTimeout(() => {
-        showSettlementModal();
-      }, 1000);
+  // 5. 檢查金庫是否已達標（超過 15,000 pt），如果是則動態渲染提醒結算卡片
+  const alertContainer = document.getElementById("vault-settle-alert-container");
+  if (alertContainer) {
+    if (STATE.vaultPoints >= STATE.vaultTarget && (STATE.questActive || STATE.members.length > 1)) {
+      alertContainer.innerHTML = `
+        <div class="content-card glowing-guide" id="vault-settle-alert-card" style="background: linear-gradient(135deg, rgba(0, 137, 123, 0.1), rgba(255, 179, 0, 0.1)); border: 2px solid var(--primary-teal) !important; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; text-align: center; box-shadow: none;">
+          <h4 style="color: var(--primary-teal); font-size: 0.88rem; font-weight: 700; margin: 0 0 0.3rem 0;">
+            <i class="fa-solid fa-gift" style="color: #FFB300;"></i> 金庫已達標！點數派發就緒
+          </h4>
+          <p style="font-size: 0.68rem; color: var(--text-muted); margin: 0 0 0.8rem 0; line-height: 1.4;">
+            恭喜！團隊共同點數已累計達 <strong>${STATE.vaultPoints.toLocaleString()} pt</strong>，已滿足 15,000 pt 的起結門檻。
+          </p>
+          <button class="btn btn-teal btn-sm btn-block" id="btn-trigger-vault-settlement" style="font-size: 0.72rem; padding: 6px 0; font-weight: 700;">
+            立即執行金庫分帳結算
+          </button>
+        </div>
+      `;
+      // 綁定點擊事件以彈出結算彈窗
+      const settleBtn = alertContainer.querySelector("#btn-trigger-vault-settlement");
+      if (settleBtn) {
+        settleBtn.addEventListener("click", () => {
+          showSettlementModal();
+        });
+      }
+    } else {
+      alertContainer.innerHTML = "";
     }
   }
 }
@@ -840,19 +1016,15 @@ function submitInvite() {
 
   closeInviteModal();
   updateIsland("邀請函發送中...", "active purple");
-  showToast("邀請發送中", `已發送邀請簡訊給 ${name} (${phone})。`, "teal");
-
-  setTimeout(() => {
+  showToast("邀請發送中", `已發送邀請簡訊給 ${name} (${phone})。`, "teal");  setTimeout(() => {
     // 模擬好友接受邀請
-    updateIsland(`🎉 ${name} 已加入金庫`, "active success");
-    showToast("成員已加入", `🎉 ${name} 接受了邀請，攜帶點數加入「快閃戰隊金庫」！`, "purple");
+    updateIsland(`🎉 ${name} 已接受邀請`, "active success");
+    showToast("成員接受邀請", `🎉 ${name} 接受了邀請，屬性已成功註冊，待與團隊組成金庫！`, "purple");
     
-    // 將新好友加入金庫成員列表
-    const initials = name.charAt(0);
     const newPoints = 1200 + Math.floor(Math.random() * 800); // 隨機攜帶 1200-2000 點
-    const color = STATE.members.length % 2 === 0 ? "bg-orange" : "bg-green";
+    const color = "bg-green";
     
-    STATE.members.push({
+    const newFriend = {
       name: `${name} (${relation})`,
       phone: phone,
       gender: gender,
@@ -860,25 +1032,28 @@ function submitInvite() {
       points: newPoints,
       color: color,
       max: 6500
-    });
-    
-    // 更新金庫總點數 (累加好友帶入的點數)
-    const targetVault = STATE.vaultPoints + newPoints;
-    animateNumber("vault-points-display", STATE.vaultPoints, targetVault, "", 600);
-    STATE.vaultPoints = targetVault;
-    
-    // 渲染更新後的金庫成員列表與模擬乘車核取方塊
-    renderMemberList();
-    renderSimCompanions();
-    
-    // 寫入交易日誌
-    insertVaultLog(`${name} 攜點加入金庫 (${relation})`, "剛剛 · 成功連結", `+${newPoints.toLocaleString()} pt`, "positive", "fa-user-plus", "bg-light-gold", "text-gold");
-    
+    };
+
+    // 如果團隊尚未正式組成 (contacts 中還有未確定的成員)
+    if (STATE.contacts && STATE.contacts.length > 0) {
+      STATE.contacts.push(newFriend);
+    } else {
+      // 若已經成隊，則作為新成員中途加入團隊，直接加入 members
+      STATE.members.push(newFriend);
+      
+      // 更新金庫總點數 (累加好友帶入的點數)
+      const targetVault = STATE.vaultPoints + newPoints;
+      animateNumber("vault-points-display", STATE.vaultPoints, targetVault, "", 600);
+      STATE.vaultPoints = targetVault;
+      
+      // 寫入交易日誌
+      insertVaultLog(`${name} 攜點加入金庫 (${relation})`, "剛剛 · 成功連結", `+${newPoints.toLocaleString()} pt`, "positive", "fa-user-plus", "bg-light-gold", "text-gold");
+      
       // 尋找對應被邀請的任務 ID
       const targetQuestId = STATE.currentInvitingQuestId || "default-quest";
       const targetQuest = STATE.activeQuests.find(q => q.id === targetQuestId);
       
-      if (targetQuest && targetQuest.step === 3) {
+      if (targetQuest && targetQuest.step < 4) {
         let newTitle = targetQuest.title;
         let newReward = 400;
         
@@ -899,8 +1074,22 @@ function submitInvite() {
         
         showToast("任務獎勵提升！", `👥 由於新成員 ${name} 共同參與，任務獎勵提高至 +${newReward} pt！`, "purple");
       }
-      
-      renderActiveQuests(); // 重新渲染所有的進行中任務卡
+    }
+    
+    // 渲染更新後的金庫成員列表與模擬乘車核取方塊
+    renderMemberList();
+    renderSimCompanions();
+    renderActiveQuests(); // 重新渲染所有的進行中任務卡
+    
+    // 核心引導：不自動跳轉，提示下一步！
+    const firstStep1Quest = STATE.activeQuests.find(q => q.step === 1);
+    if (firstStep1Quest) {
+      const homeTabBtn = document.querySelector(".nav-item[onclick*='home']");
+      if (homeTabBtn) {
+        homeTabBtn.classList.add("glowing-guide");
+      }
+      showToast("引導提示", "👉 成員已成功受邀！請點選底部【首頁】按鈕以模擬乘車出站。", "gold");
+    }
   }, 2200);
 }
 
@@ -922,6 +1111,9 @@ function renderMemberList() {
     const genderStr = m.gender || "男";
     const ageStr = m.age ? `${m.age}歲` : "25歲";
     
+    // 永遠提供編輯按鈕，讓 User 可以修改自己（我）的年齡與性別屬性
+    const editHtml = `<a href="javascript:void(0)" class="btn-edit-member" data-index="${idx}" style="color: var(--primary-teal); font-size: 0.72rem; margin-left: 2px; text-decoration: none; cursor: pointer;" title="編輯成員屬性"><i class="fa-solid fa-pen"></i></a>`;
+
     item.innerHTML = `
       <div class="member-avatar ${m.color}">${initials}</div>
       <div class="member-info">
@@ -930,7 +1122,7 @@ function renderMemberList() {
           <span style="font-size: 0.58rem; color: var(--text-muted); background-color: #f1f1f1; padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 2px;">
             ${genderStr} · ${ageStr}
           </span>
-          <a href="javascript:void(0)" class="btn-edit-member" data-index="${idx}" style="color: var(--primary-teal); font-size: 0.72rem; margin-left: 2px; text-decoration: none; cursor: pointer;" title="編輯成員屬性"><i class="fa-solid fa-pen"></i></a>
+          ${editHtml}
         </div>
         <div class="member-progress-container" style="margin-top: 4px;">
           <div class="member-progress-bar ${m.color}" style="width: ${mPercent}%"></div>
@@ -950,8 +1142,19 @@ function renderMemberList() {
       const idx = parseInt(btn.getAttribute("data-index"));
       const m = STATE.members[idx];
       
+      // 確保建立 type 隱藏欄位並設定為 member
+      let editTypeEl = document.getElementById("edit-member-type");
+      if (!editTypeEl) {
+        editTypeEl = document.createElement("input");
+        editTypeEl.type = "hidden";
+        editTypeEl.id = "edit-member-type";
+        document.getElementById("edit-member-modal").appendChild(editTypeEl);
+      }
+      editTypeEl.value = "member";
+      
       document.getElementById("edit-member-index").value = idx;
-      document.getElementById("edit-member-name").value = m.name;
+      const cleanName = m.name.split(" (")[0];
+      document.getElementById("edit-member-name").value = cleanName;
       document.getElementById("edit-member-phone").value = m.phone || "";
       document.getElementById("edit-member-gender").value = m.gender || "男";
       document.getElementById("edit-member-age").value = m.age || 25;
@@ -960,7 +1163,183 @@ function renderMemberList() {
     });
   });
 
-  // 2. 渲染顯眼的邀請入口卡片（虛線邊框與高亮按鈕效果）
+  // 2. 渲染「組成金庫團隊」選擇面板 (如果還有待選的 contacts)
+  if (STATE.contacts && STATE.contacts.length > 0) {
+    const composeCard = document.createElement("div");
+    composeCard.className = "content-card";
+    composeCard.style.marginTop = "1rem";
+    composeCard.style.border = "2px dashed var(--primary-teal)";
+    composeCard.style.backgroundColor = "rgba(0, 137, 123, 0.01)";
+    composeCard.style.borderRadius = "12px";
+    composeCard.style.padding = "0.8rem";
+    composeCard.style.boxShadow = "none";
+    
+    composeCard.innerHTML = `
+      <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--primary-teal); margin: 0 0 0.3rem 0; display: flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-user-group"></i> 組成金庫團隊
+      </h4>
+      <p style="font-size: 0.65rem; color: var(--text-muted); margin: 0 0 0.6rem 0; line-height: 1.45;">
+        請勾選共同金庫隊員。系統將運用 AI 引擎，根據團隊結構與人數派發專屬任務：
+      </p>
+      
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 0.8rem;" id="contacts-selection-list">
+        ${STATE.contacts.map((c, idx) => {
+          const genderStr = c.gender || "女";
+          const ageStr = c.age ? `${c.age}歲` : "25歲";
+          return `
+            <div style="display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); margin: 0;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; margin: 0; flex-grow: 1;">
+                <input type="checkbox" class="contact-checkbox" value="${idx}" checked style="accent-color: var(--primary-teal); width: 14px; height: 14px; margin: 0;">
+                <div style="display: flex; flex-direction: column;">
+                  <span style="font-size: 0.76rem; font-weight: 700; color: var(--text-dark);">${c.name}</span>
+                  <span style="font-size: 0.58rem; color: var(--text-muted); margin-top: 1px;">
+                    ${genderStr} · ${ageStr}
+                  </span>
+                </div>
+              </label>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <a href="javascript:void(0)" class="btn-edit-contact" data-index="${idx}" style="color: var(--primary-teal); font-size: 0.72rem; text-decoration: none; cursor: pointer;" title="編輯聯絡人屬性"><i class="fa-solid fa-pen"></i></a>
+                <span style="font-size: 0.72rem; color: var(--primary-teal); font-weight: 700;">+${c.points.toLocaleString()} pt</span>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+      
+      <button class="btn btn-teal btn-sm btn-block glowing-guide" id="btn-confirm-compose-team" style="font-size: 0.72rem; padding: 6px 0; font-weight: 700;">
+        確認組成團隊並派發 AI 任務
+      </button>
+    `;
+    
+    list.appendChild(composeCard);
+    
+    // 綁定編輯聯絡人點擊事件
+    composeCard.querySelectorAll(".btn-edit-contact").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = parseInt(btn.getAttribute("data-index"));
+        const c = STATE.contacts[idx];
+        
+        // 確保建立 type 隱藏欄位並設定為 contact
+        let editTypeEl = document.getElementById("edit-member-type");
+        if (!editTypeEl) {
+          editTypeEl = document.createElement("input");
+          editTypeEl.type = "hidden";
+          editTypeEl.id = "edit-member-type";
+          document.getElementById("edit-member-modal").appendChild(editTypeEl);
+        }
+        editTypeEl.value = "contact";
+        
+        document.getElementById("edit-member-index").value = idx;
+        const cleanName = c.name.split(" (")[0];
+        document.getElementById("edit-member-name").value = cleanName;
+        document.getElementById("edit-member-phone").value = c.phone || "";
+        document.getElementById("edit-member-gender").value = c.gender || "女";
+        document.getElementById("edit-member-age").value = c.age || 25;
+        
+        document.getElementById("edit-member-modal").style.display = "flex";
+      });
+    });
+    
+    // 綁定確認組成團隊點擊事件
+    composeCard.querySelector("#btn-confirm-compose-team").addEventListener("click", () => {
+      const checkedBoxes = Array.from(composeCard.querySelectorAll(".contact-checkbox:checked"));
+      if (checkedBoxes.length === 0) {
+        showToast("提示", "請至少勾選一位成員以組成共同團隊！", "gold");
+        return;
+      }
+      
+      const selectedIndices = checkedBoxes.map(cb => parseInt(cb.value));
+      
+      // 1. 移動選中的成員至 members
+      const selectedContacts = selectedIndices.map(i => STATE.contacts[i]);
+      
+      // 累加攜帶點數到金庫
+      let addedPoints = 0;
+      selectedContacts.forEach(c => {
+        STATE.members.push(c);
+        addedPoints += c.points;
+      });
+      
+      // 從 contacts 中移除選中的
+      STATE.contacts = STATE.contacts.filter((_, idx) => !selectedIndices.includes(idx));
+      
+      // 更新金庫總分與 UI
+      const targetVault = STATE.vaultPoints + addedPoints;
+      animateNumber("vault-points-display", STATE.vaultPoints, targetVault, "", 600);
+      STATE.vaultPoints = targetVault;
+      
+      // 2. 運用 AI 派發合適的同行任務
+      const totalCount = STATE.members.length; // 我 ＋ 選中的
+      let dispatchedQuest;
+      
+      if (totalCount === 2) {
+        // 雙人同行任務
+        dispatchedQuest = {
+          id: "quest-" + Date.now(),
+          title: "雙人週末出遊",
+          station: ["中山", "台大醫院", "西門", "行天宮", "忠孝復興"][Math.floor(Math.random() * 5)],
+          category: "咖啡廳☕",
+          reward: 5200,
+          step: 1,
+          timerSeconds: 10800,
+          riders: [],
+          invitees: [],
+          isExpanded: true
+        };
+      } else {
+        // 三人以上任務，隨機選一個
+        const questOptions = [
+          { title: "地下鐵尋寶趣", category: "文創選物🎨" },
+          { title: "夜市美食聚點", category: "飲料店🥤" }
+        ];
+        const selectedOption = questOptions[Math.floor(Math.random() * 2)];
+        dispatchedQuest = {
+          id: "quest-" + Date.now(),
+          title: selectedOption.title,
+          station: ["中山", "台大醫院", "西門", "行天宮", "忠孝復興"][Math.floor(Math.random() * 5)],
+          category: selectedOption.category,
+          reward: 3200 + (totalCount - 3) * 1000, // 3人 3200 pt，多一人再加 1000 pt
+          step: 1,
+          timerSeconds: 10800,
+          riders: [],
+          invitees: [],
+          isExpanded: true
+        };
+      }
+      
+      STATE.activeQuests = [dispatchedQuest];
+      STATE.questActive = true;
+      
+      // 3. 渲染
+      renderMemberList();
+      renderHomeSimulator(); // 同步渲染首頁模擬器
+      renderSimCompanions();
+      renderActiveQuests();
+      renderRecommendedQuests(); // 同步渲染推薦任務
+      updatePointsUI(true);
+      
+      // 寫入金庫日誌
+      const memberNames = selectedContacts.map(c => c.name.split(" ")[0]).join("、");
+      insertVaultLog(`金庫團隊組成 (${memberNames})`, "剛剛 · 成功組成戰隊", `+${addedPoints.toLocaleString()} pt`, "positive", "fa-user-group", "bg-light-gold", "text-gold");
+      
+      updateIsland(`✨ ${totalCount}人團隊已組成！`, "active success");
+      showToast("團隊組成成功", `👥 成功組成 ${totalCount} 人團隊！AI 已派發專屬限時任務「${dispatchedQuest.title}」。`, "teal");
+      
+      // 4. 清除引導高亮，並為下一步「首頁」加上引導亮圈
+      document.querySelectorAll(".glowing-guide").forEach(el => el.classList.remove("glowing-guide"));
+      
+      setTimeout(() => {
+        const homeTabBtn = document.querySelector(".nav-item[onclick*='home']");
+        if (homeTabBtn) {
+          homeTabBtn.classList.add("glowing-guide");
+        }
+        showToast("引導提示", "👉 團隊已組成！請點選底部【首頁】按鈕以模擬乘車出站。", "gold");
+      }, 1000);
+    });
+  }
+
+  // 3. 渲染邀請入口卡片（隱藏在組成面板下方，或在組成完成後供繼續邀請）
   const inviteItem = document.createElement("div");
   inviteItem.className = "member-item invite-squad-trigger";
   inviteItem.style.cursor = "pointer";
@@ -977,7 +1356,7 @@ function renderMemberList() {
   inviteItem.innerHTML = `
     <div class="member-avatar" style="background: rgba(0, 137, 123, 0.1); border: 2px dashed var(--primary-teal); color: var(--primary-teal); font-weight: 700; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;"><i class="fa-solid fa-plus"></i></div>
     <div class="member-info" style="flex-grow: 1;">
-      <span class="member-name" style="color: var(--primary-teal); font-weight: 700; font-size: 0.85rem; display: block;">+ 邀請成員加入金庫</span>
+      <span class="member-name" style="color: var(--primary-teal); font-weight: 700; font-size: 0.85rem; display: block;">+ 邀請成員組成團隊</span>
       <span style="font-size: 0.68rem; color: var(--text-muted); display: block; margin-top: 2px;">合力眾籌點數，即時加碼多人任務獎勵！</span>
     </div>
     <i class="fa-solid fa-chevron-right" style="color: var(--primary-teal); font-size: 0.8rem; margin-right: 4px;"></i>
@@ -1095,17 +1474,19 @@ function showSettlementModal() {
  * 結算完成，重置 Demo 為初始狀態
  */
 function resetDemoToInitial() {
-  // 1. 重置數據狀態
+  // 1. 重置數據狀態為初始未組隊狀態
   STATE.personalPoints = 5820;
-  STATE.vaultPoints = 12480;
+  STATE.vaultPoints = 5820;
   STATE.vaultTarget = 15000;
   STATE.members = [
-    { name: "我", phone: "0912345678", gender: "男", age: 28, points: 5820, color: "bg-blue", max: 6500 },
+    { name: "我", phone: "0912345678", gender: "男", age: 28, points: 5820, color: "bg-blue", max: 6500 }
+  ];
+  STATE.contacts = [
     { name: "楊小芸 (伴侶)", phone: "0987654321", gender: "女", age: 25, points: 4310, color: "bg-pink", max: 6500 },
     { name: "陳阿明 (好友)", phone: "0976543210", gender: "男", age: 30, points: 2350, color: "bg-green", max: 6500 }
   ];
-  STATE.questActive = true;
-  STATE.questStep = 3;
+  STATE.questActive = false;
+  STATE.questStep = 1;
   STATE.questStation = "中山";
   STATE.questTimerSeconds = 8073;
   STATE.questReward = 250;
@@ -1113,15 +1494,14 @@ function resetDemoToInitial() {
   // 2. 重新渲染 UI 列表與同行隊員選擇核取方塊
   renderMemberList();
   renderSimCompanions();
+  renderHomeSimulator();
   updatePointsUI(false);
 
   // 3. 隱藏結算彈窗
   document.getElementById("settlement-modal").style.display = "none";
 
-  // 4. 重置任務大廳 UI 狀態為隨機產生的步驟 1 任務
-  STATE.activeQuests = [
-    generateRandomQuest("default-quest")
-  ];
+  // 4. 重置任務大廳為空 (等待組隊派發)
+  STATE.activeQuests = [];
   renderActiveQuests();
   renderRecommendedQuests();
 
@@ -1130,12 +1510,13 @@ function resetDemoToInitial() {
   document.getElementById("sim-end-station").value = "中山";
 
   // 5. 清除任務導覽紅點
-  document.getElementById("nav-quest-dot").classList.remove("active");
+  const navDot = document.getElementById("nav-quest-dot");
+  if (navDot) navDot.classList.remove("active");
 
-  // 7. 切換到金庫分頁，向使用者展示金庫已重置回 12,480 (83%) 狀態
+  // 7. 切換到金庫分頁以重新組隊
   switchTab("vault");
 
-  showToast("重置成功", "✨ 金庫已完成結算，演示環境已重置為初始狀態！", "teal");
+  showToast("重置成功", "✨ 演示環境已重置，請再次勾選成員以「組成團隊」派發任務！", "teal");
   updateIsland("✨ 演示環境已重置", "active success");
 }
 
@@ -1454,7 +1835,7 @@ function renderActiveQuests() {
                   <div class="upload-dropzone btn-upload-receipt" data-id="${quest.id}">
                     <i class="fa-solid fa-camera"></i>
                     <span>點擊拍攝或上傳收據照片</span>
-                    <span class="upload-sub">支援 Gemini Vision 智能秒級審核</span>
+                    <span class="upload-sub">支援 AI Vision 智能秒級審核</span>
                   </div>
                   <input type="file" id="file-receipt-${quest.id}" accept="image/*" style="display: none;" class="file-receipt" data-id="${quest.id}">
                 </div>
@@ -1464,7 +1845,7 @@ function renderActiveQuests() {
                   <div class="scan-bar" style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to right, transparent, #ba68c8, #ba68c8, transparent); box-shadow: 0 0 10px #ba68c8; animation: scan 2s linear infinite;"></div>
                   <div class="spinner-container" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
                     <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 1.4rem; color: #fff; margin-bottom: 8px;"></i>
-                    <span style="font-size: 0.72rem; font-weight: 700; color: #fff;">Gemini Vision 審核中...</span>
+                    <span style="font-size: 0.72rem; font-weight: 700; color: #fff;">AI Vision 審核中...</span>
                   </div>
                   <pre class="ai-console-log" id="ai-log-text-${quest.id}" style="width: 100%; max-height: 140px; overflow-y: auto; background-color: #1e1e1e; color: #a6e22e; font-family: monospace; font-size: 0.58rem; padding: 8px; border-radius: 8px; margin-top: 10px; text-align: left; white-space: pre-wrap; line-height: 1.4; box-sizing: border-box;"></pre>
                 </div>
@@ -1542,6 +1923,149 @@ function renderActiveQuests() {
       });
     }
   });
+
+  // 自動同步首頁終點站下拉選單，讓使用者直接點擊即可順利進行任務
+  syncEndStationSelection();
+}
+
+/**
+ * 同步首頁「終點站」下拉選單選取狀態為當前進行中任務的目標車站，引導使用者點擊
+ */
+function syncEndStationSelection() {
+  const endSelector = document.getElementById("sim-end-station");
+  if (!endSelector || !STATE.activeQuests || STATE.activeQuests.length === 0) return;
+  
+  // 優先找出尚未完成的第一個任務站點 (step < 4)
+  const activeQuest = STATE.activeQuests.find(q => q.step < 4) || STATE.activeQuests[0];
+  if (activeQuest) {
+    for (let i = 0; i < endSelector.options.length; i++) {
+      if (endSelector.options[i].value.startsWith(activeQuest.station)) {
+        endSelector.selectedIndex = i;
+        break;
+      }
+    }
+  }
+}
+
+/**
+ * 渲染首頁模擬器卡片 (如果尚未組隊則顯示防呆引導卡片，如同任務大廳)
+ */
+function renderHomeSimulator() {
+  const container = document.getElementById("home-simulator-card-container");
+  if (!container) return;
+
+  if (STATE.members.length === 1) {
+    // 尚未組隊：顯示防呆佔位卡，引導前往金庫組隊
+    container.innerHTML = `
+      <div class="content-card" style="padding: 1.5rem 1rem; text-align: center;">
+        <div class="empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+          <div class="empty-icon" style="font-size: 2.2rem; color: var(--primary-teal); opacity: 0.8; margin-bottom: 4px;"><i class="fa-solid fa-people-group"></i></div>
+          <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-dark); margin: 0 0 4px 0;">尚未組成金庫團隊</h3>
+          <p style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.45; margin: 0 0 16px 0; max-width: 250px; text-align: center;">
+            請先至「金庫」頁面勾選隊員組成共同團隊。系統將根據您的團隊人數與特徵，運用 AI 引擎即時客製化派發限時任務與模擬通勤軌跡！
+          </p>
+          <button class="btn btn-teal btn-sm" onclick="switchTab('vault')" style="font-size: 0.72rem; padding: 6px 16px; font-weight: 700; border-radius: 20px;">前往金庫組隊</button>
+        </div>
+      </div>
+    `;
+  } else {
+    // 已組隊：渲染通勤軌跡模擬表單
+    container.innerHTML = `
+      <div class="content-card">
+        <div class="card-title">
+          <h4><i class="fa-solid fa-route text-teal"></i> 通勤軌跡模擬</h4>
+          <span class="tag tag-live">AI 即時分析</span>
+        </div>
+        <p class="card-desc">模擬您的捷運卡進出站紀錄，測試 AI 任務生成引擎：</p>
+        
+        <div class="route-simulator">
+          <div class="station-select-vertical" style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-bottom: 0.8rem;">
+            <div class="station-node-row" style="display: flex; align-items: center; gap: 10px; background-color: #f5f5f5; padding: 8px 12px; border-radius: 8px;">
+              <span class="dot line-blue" style="width: 8px; height: 8px; background-color: #2196F3; border-radius: 50%; flex-shrink: 0;"></span>
+              <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); width: 45px; flex-shrink: 0;">起點站</span>
+              <select id="sim-start-station" style="flex-grow: 1; border: none; background: transparent; font-size: 0.78rem; font-weight: 600; padding: 4px 0; outline: none; cursor: pointer; width: 100%;">
+                <option value="台北車站">台北車站 (BL12 / R10)</option>
+                <option value="板橋">板橋 (BL07)</option>
+                <option value="市政府">市政府 (BL18)</option>
+                <option value="台大醫院">台大醫院 (R09)</option>
+                <option value="行天宮">行天宮 (O14)</option>
+              </select>
+            </div>
+            
+            <!-- 垂直連接虛線 -->
+            <div style="display: flex; align-items: center; padding-left: 16px; margin: -4px 0; height: 12px;">
+              <div style="border-left: 2px dashed #ccc; height: 100%;"></div>
+            </div>
+
+            <div class="station-node-row" style="display: flex; align-items: center; gap: 10px; background-color: #f5f5f5; padding: 8px 12px; border-radius: 8px;">
+              <span class="dot line-red" style="width: 8px; height: 8px; background-color: #E91E63; border-radius: 50%; flex-shrink: 0;"></span>
+              <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); width: 45px; flex-shrink: 0;">終點站</span>
+              <select id="sim-end-station" style="flex-grow: 1; border: none; background: transparent; font-size: 0.78rem; font-weight: 600; padding: 4px 0; outline: none; cursor: pointer; width: 100%;">
+                <option value="中山" selected>中山 (R11 / G14)</option>
+                <option value="台大醫院">台大醫院 (R09)</option>
+                <option value="忠孝復興">忠孝復興 (BL15)</option>
+                <option value="西門">西門 (BL11 / G12)</option>
+                <option value="行天宮">行天宮 (O14)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="companions-selection" style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 0.8rem; width: 100%;">
+            <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-users"></i> 選擇同行乘車隊員：</span>
+            <div class="sim-companions-list" id="sim-companions-list">
+              <!-- 由 JS 動態渲染金庫隊員核取方塊 -->
+            </div>
+          </div>
+
+          <button id="btn-trigger-route" class="btn btn-teal btn-block">
+            <i class="fa-solid fa-paper-plane"></i> 模擬乘車出站
+          </button>
+        </div>
+      </div>
+    `;
+
+    // 重新綁定事件
+    document.getElementById("btn-trigger-route").addEventListener("click", triggerRideSimulation);
+    renderSimCompanions();
+    syncEndStationSelection();
+  }
+}
+
+/**
+ * 團隊組成成功後的自動乘車引導流程
+ */
+function triggerAutoRideFlow(quest) {
+  // 1. 切換到首頁 Tab
+  switchTab('home');
+  
+  setTimeout(() => {
+    // 2. 同步設定起點與終點站
+    document.getElementById("sim-start-station").value = "台北車站";
+    syncEndStationSelection();
+    
+    // 3. 勾選所有金庫成員進行多人搭乘模擬
+    const checkboxes = document.querySelectorAll('input[name="sim-companion-check"]');
+    checkboxes.forEach(cb => {
+      cb.checked = true;
+      cb.parentElement.classList.add("checked");
+    });
+    
+    // 4. 自動觸發乘車出站模擬！
+    triggerRideSimulation();
+  }, 400);
+}
+
+/**
+ * 任務完成後的自動金庫結算分帳引導流程
+ */
+function triggerAutoSettlement() {
+  switchTab('vault');
+  setTimeout(() => {
+    // 模擬注入充足點數以超過目標 15,000 pt 門檻，提醒手動結算
+    const amountToAdd = Math.max(0, 15050 - STATE.vaultPoints);
+    addPoints(amountToAdd, 0);
+    showToast("金庫已達標", "💰 已為您快速累積點數至達標！請點選金庫頁面中的「立即執行金庫分帳結算」進行結算演示。", "teal");
+  }, 400);
 }
 
 /**
@@ -1551,11 +2075,19 @@ function renderRecommendedQuests() {
   const container = document.getElementById("recommended-quests-container");
   if (!container) return;
   
+  const card = document.getElementById("recommended-quests-card");
+  if (STATE.members.length === 1) {
+    if (card) card.style.display = "none";
+    container.innerHTML = "";
+    return;
+  }
+  if (card) card.style.display = "block";
+  
   // 定義 3 組任務主題與分類配對
   const questPool = [
-    { title: "雙人週末出遊", category: "咖啡廳☕", baseReward: 250, iconClass: "fa-mug-hot", bgClass: "bg-orange" },
-    { title: "地下鐵尋寶趣", category: "文創選物🎨", baseReward: 80, iconClass: "fa-map-location-dot", bgClass: "bg-orange" },
-    { title: "夜市美食聚點", category: "飲料店🥤", baseReward: 150, iconClass: "fa-utensils", bgClass: "bg-red" }
+    { title: "雙人週末出遊", category: "咖啡廳☕", baseReward: 5200, iconClass: "fa-mug-hot", bgClass: "bg-orange" },
+    { title: "地下鐵尋寶趣", category: "文創選物🎨", baseReward: 3200, iconClass: "fa-map-location-dot", bgClass: "bg-orange" },
+    { title: "夜市美食聚點", category: "飲料店🥤", baseReward: 3200, iconClass: "fa-utensils", bgClass: "bg-red" }
   ];
   
   const stations = ["中山", "台大醫院", "行天宮", "忠孝復興", "西門"];

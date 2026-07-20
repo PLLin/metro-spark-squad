@@ -21,7 +21,7 @@
       <div class="sidebar-brand">
         <span class="badge">2026 捷運盃黑客松提案</span>
         <h1>燎原智庫・點燃同行</h1>
-        <p class="subtitle">以「捷運點」為核心的社群金融與 GenAI 任務引擎</p>
+        <p class="subtitle">以「捷運點」為核心的社群金融與 AI 任務引擎</p>
       </div>
 
       <div class="sidebar-section">
@@ -39,47 +39,46 @@
       <div class="sidebar-section">
         <h3><i class="fa-solid fa-route"></i> 核心機制與互動試用流程</h3>
         <p class="section-desc">請依序點擊下方步驟的「即時試用」按鈕，即可引導 App 畫面進行完整點數生態圈的動態演示：</p>
-        
         <div class="workflow-timeline">
-          <!-- 步驟一 -->
+          <!-- 步驟零 -->
           <div class="workflow-step">
-            <div class="step-badge badge-teal">步驟 01</div>
+            <div class="step-badge badge-teal">步驟 00</div>
             <div class="step-body">
-              <h4>智慧社群金庫 (Social Vault)</h4>
-              <p>支援家庭、伴侶與快閃戰友。建立共同點數池共享眾籌，並藉由後端邏輯自動拆帳。</p>
-              <button id="btn-interactive-vault" class="btn-trial btn-trial-teal">
-                <i class="fa-solid fa-user-plus"></i> 👉 即時試用：邀請好友加入
+              <h4>快速組成團隊</h4>
+              <p>自動選擇推薦的好友成員並組成共同點數金庫，派發專屬 AI 任務。</p>
+              <button id="btn-interactive-compose" class="btn-trial btn-trial-teal">
+                <i class="fa-solid fa-user-group"></i> 👉 快速點擊：組成團隊
               </button>
             </div>
           </div>
 
-          <!-- 步驟二 -->
+          <!-- 步驟一 -->
           <div class="workflow-step">
-            <div class="step-badge badge-purple">步驟 02</div>
+            <div class="step-badge badge-purple">步驟 01</div>
             <div class="step-body">
-              <h4>GenAI 動態任務引擎</h4>
-              <p>根據進出站票證與同行特徵，LLM (Vertex AI) 動態生成專屬限時任務引導 O2O 人流。</p>
+              <h4>AI 動態任務引擎</h4>
+              <p>根據進出站票證與同行特徵，LLM (AI) 動態生成專屬限時任務引導 O2O 人流。</p>
               <button id="btn-interactive-quest" class="btn-trial btn-trial-purple">
                 <i class="fa-solid fa-train-subway"></i> 👉 即時試用：模擬雙人乘車
               </button>
             </div>
           </div>
 
-          <!-- 步驟三 -->
+          <!-- 步驟二 -->
           <div class="workflow-step">
-            <div class="step-badge badge-gold">步驟 03</div>
+            <div class="step-badge badge-gold">步驟 02</div>
             <div class="step-body">
-              <h4>Gemini Vision 視覺審核</h4>
-              <p>上傳合作商家消費發票，Gemini 自動辨識明細並比對出站軌跡，防偽驗證後發放獎勵。</p>
+              <h4>AI Vision 視覺審核</h4>
+              <p>上傳合作商家消費發票，AI 自動辨識明細並比對出站軌跡，防偽驗證後發放獎勵。</p>
               <button id="btn-interactive-vision" class="btn-trial btn-trial-gold">
                 <i class="fa-solid fa-file-invoice-dollar"></i> 👉 即時試用：模擬收據驗證
               </button>
             </div>
           </div>
 
-          <!-- 步驟四 -->
+          <!-- 步驟三 -->
           <div class="workflow-step">
-            <div class="step-badge badge-blue">步驟 04</div>
+            <div class="step-badge badge-blue">步驟 03</div>
             <div class="step-body">
               <h4>金庫滿額分帳結算</h4>
               <p>當社群金庫成功集滿 15,000 pt 後，自動啟動分帳解鎖，將公有金庫點數平分撥入各人帳戶並重置。</p>
@@ -154,55 +153,57 @@
 
               <div class="view-content">
                 <!-- 捷運動態動線模擬器 -->
-                <div class="content-card">
-                  <div class="card-title">
-                    <h4><i class="fa-solid fa-route text-teal"></i> 通勤軌跡模擬</h4>
-                    <span class="tag tag-live">AI 即時分析</span>
-                  </div>
-                  <p class="card-desc">模擬您的捷運卡進出站紀錄，測試 GenAI 任務生成引擎：</p>
-                  
-                  <div class="route-simulator">
-                    <div class="station-select-vertical" style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-bottom: 0.8rem;">
-                      <div class="station-node-row" style="display: flex; align-items: center; gap: 10px; background-color: #f5f5f5; padding: 8px 12px; border-radius: 8px;">
-                        <span class="dot line-blue" style="width: 8px; height: 8px; background-color: #2196F3; border-radius: 50%; flex-shrink: 0;"></span>
-                        <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); width: 45px; flex-shrink: 0;">起點站</span>
-                        <select id="sim-start-station" style="flex-grow: 1; border: none; background: transparent; font-size: 0.78rem; font-weight: 600; padding: 4px 0; outline: none; cursor: pointer; width: 100%;">
-                          <option value="台北車站">台北車站 (BL12 / R10)</option>
-                          <option value="板橋">板橋 (BL07)</option>
-                          <option value="市政府">市政府 (BL18)</option>
-                          <option value="台大醫院">台大醫院 (R09)</option>
-                          <option value="行天宮">行天宮 (O14)</option>
-                        </select>
-                      </div>
-                      
-                      <!-- 垂直連接虛線 -->
-                      <div style="display: flex; align-items: center; padding-left: 16px; margin: -4px 0; height: 12px;">
-                        <div style="border-left: 2px dashed #ccc; height: 100%;"></div>
-                      </div>
-
-                      <div class="station-node-row" style="display: flex; align-items: center; gap: 10px; background-color: #f5f5f5; padding: 8px 12px; border-radius: 8px;">
-                        <span class="dot line-red" style="width: 8px; height: 8px; background-color: #E91E63; border-radius: 50%; flex-shrink: 0;"></span>
-                        <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); width: 45px; flex-shrink: 0;">終點站</span>
-                        <select id="sim-end-station" style="flex-grow: 1; border: none; background: transparent; font-size: 0.78rem; font-weight: 600; padding: 4px 0; outline: none; cursor: pointer; width: 100%;">
-                          <option value="中山" selected>中山 (R11 / G14)</option>
-                          <option value="台大醫院">台大醫院 (R09)</option>
-                          <option value="忠孝復興">忠孝復興 (BL15)</option>
-                          <option value="西門">西門 (BL11 / G12)</option>
-                          <option value="行天宮">行天宮 (O14)</option>
-                        </select>
-                      </div>
+                <div id="home-simulator-card-container">
+                  <div class="content-card">
+                    <div class="card-title">
+                      <h4><i class="fa-solid fa-route text-teal"></i> 通勤軌跡模擬</h4>
+                      <span class="tag tag-live">AI 即時分析</span>
                     </div>
+                    <p class="card-desc">模擬您的捷運卡進出站紀錄，測試 AI 任務生成引擎：</p>
+                    
+                    <div class="route-simulator">
+                      <div class="station-select-vertical" style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-bottom: 0.8rem;">
+                        <div class="station-node-row" style="display: flex; align-items: center; gap: 10px; background-color: #f5f5f5; padding: 8px 12px; border-radius: 8px;">
+                          <span class="dot line-blue" style="width: 8px; height: 8px; background-color: #2196F3; border-radius: 50%; flex-shrink: 0;"></span>
+                          <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); width: 45px; flex-shrink: 0;">起點站</span>
+                          <select id="sim-start-station" style="flex-grow: 1; border: none; background: transparent; font-size: 0.78rem; font-weight: 600; padding: 4px 0; outline: none; cursor: pointer; width: 100%;">
+                            <option value="台北車站">台北車站 (BL12 / R10)</option>
+                            <option value="板橋">板橋 (BL07)</option>
+                            <option value="市政府">市政府 (BL18)</option>
+                            <option value="台大醫院">台大醫院 (R09)</option>
+                            <option value="行天宮">行天宮 (O14)</option>
+                          </select>
+                        </div>
+                        
+                        <!-- 垂直連接虛線 -->
+                        <div style="display: flex; align-items: center; padding-left: 16px; margin: -4px 0; height: 12px;">
+                          <div style="border-left: 2px dashed #ccc; height: 100%;"></div>
+                        </div>
 
-                    <div class="companions-selection" style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 0.8rem; width: 100%;">
-                      <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-users"></i> 選擇同行乘車隊員：</span>
-                      <div class="sim-companions-list" id="sim-companions-list">
-                        <!-- 由 JS 動態渲染金庫隊員核取方塊 -->
+                        <div class="station-node-row" style="display: flex; align-items: center; gap: 10px; background-color: #f5f5f5; padding: 8px 12px; border-radius: 8px;">
+                          <span class="dot line-red" style="width: 8px; height: 8px; background-color: #E91E63; border-radius: 50%; flex-shrink: 0;"></span>
+                          <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); width: 45px; flex-shrink: 0;">終點站</span>
+                          <select id="sim-end-station" style="flex-grow: 1; border: none; background: transparent; font-size: 0.78rem; font-weight: 600; padding: 4px 0; outline: none; cursor: pointer; width: 100%;">
+                            <option value="中山" selected>中山 (R11 / G14)</option>
+                            <option value="台大醫院">台大醫院 (R09)</option>
+                            <option value="忠孝復興">忠孝復興 (BL15)</option>
+                            <option value="西門">西門 (BL11 / G12)</option>
+                            <option value="行天宮">行天宮 (O14)</option>
+                          </select>
+                        </div>
                       </div>
-                    </div>
 
-                    <button id="btn-trigger-route" class="btn btn-teal btn-block">
-                      <i class="fa-solid fa-paper-plane"></i> 模擬乘車出站
-                    </button>
+                      <div class="companions-selection" style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 0.8rem; width: 100%;">
+                        <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px;"><i class="fa-solid fa-users"></i> 選擇同行乘車隊員：</span>
+                        <div class="sim-companions-list" id="sim-companions-list">
+                          <!-- 由 JS 動態渲染金庫隊員核取方塊 -->
+                        </div>
+                      </div>
+
+                      <button id="btn-trigger-route" class="btn btn-teal btn-block">
+                        <i class="fa-solid fa-paper-plane"></i> 模擬乘車出站
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -260,6 +261,9 @@
                     <i class="fa-solid fa-bolt"></i> 快閃戰隊金庫
                   </button>
                 </div>
+
+                <!-- 達標手動分帳結算提醒區 (動態控制顯示) -->
+                <div id="vault-settle-alert-container"></div>
 
                 <!-- 金庫成員列表 -->
                 <div class="content-card">
@@ -352,7 +356,7 @@
             <section id="view-quest" class="app-view">
               <div class="app-header bg-gradient-purple flex-header">
                 <div>
-                  <span class="header-pre">GenAI 動態任務引擎</span>
+                  <span class="header-pre">AI 動態任務引擎</span>
                   <h2>任務大廳</h2>
                 </div>
                 <span class="badge badge-purple" id="quest-count-badge">1 個進行中</span>
@@ -367,15 +371,15 @@
                 <!-- 暫無進行中任務時顯示的畫面 -->
                 <div id="no-quest-container" style="display: none;">
                   <div class="empty-state">
-                    <div class="empty-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-                    <h3>目前沒有進行中的限時任務</h3>
-                    <p>請至「首頁」使用乘車模擬器，或攜伴搭乘捷運，AI 將為您即時生成專屬任務！</p>
-                    <button class="btn btn-teal btn-sm" onclick="switchTab('home')">前往首頁模擬</button>
+                    <div class="empty-icon"><i class="fa-solid fa-people-group"></i></div>
+                    <h3>尚未組成金庫團隊</h3>
+                    <p>請先至「金庫」頁面勾選隊員組成共同團隊。系統將根據您的團隊人數與特徵，運用 AI 引擎即時客製化派發限時任務！</p>
+                    <button class="btn btn-teal btn-sm" onclick="switchTab('vault')">前往金庫組隊</button>
                   </div>
                 </div>
 
                 <!-- 其他推薦任務 -->
-                <div class="content-card">
+                <div class="content-card" id="recommended-quests-card">
                   <div class="card-title">
                     <h4>熱門商圈任務推薦</h4>
                   </div>
@@ -471,7 +475,7 @@
   <div class="modal-backdrop" id="invite-modal" style="display: none;">
     <div class="modal-card">
       <div class="modal-header">
-        <h3><i class="fa-solid fa-user-plus text-teal"></i> 邀請成員加入社群金庫</h3>
+        <h3><i class="fa-solid fa-user-group text-teal"></i> 邀請成員組成金庫團隊</h3>
         <button class="btn-close" id="btn-close-invite"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
@@ -510,7 +514,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="btn-cancel-invite">取消</button>
-        <button class="btn btn-teal" id="btn-submit-invite">傳送邀請函</button>
+        <button class="btn btn-teal" id="btn-submit-invite">組成團隊加入</button>
       </div>
     </div>
   </div>
