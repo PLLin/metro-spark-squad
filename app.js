@@ -1680,7 +1680,27 @@ function renderActiveQuests() {
   const noQuestContainer = document.getElementById("no-quest-container");
   if (count === 0) {
     container.innerHTML = "";
-    if (noQuestContainer) noQuestContainer.style.display = "flex";
+    if (noQuestContainer) {
+      if (STATE.members.length === 1) {
+        noQuestContainer.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon"><i class="fa-solid fa-people-group"></i></div>
+            <h3>尚未組成金庫團隊</h3>
+            <p>請先至「金庫」頁面勾選隊員組成共同團隊。系統將根據您的團隊人數與特徵，運用 AI 引擎即時客製化派發限時任務！</p>
+            <button class="btn btn-teal btn-sm" onclick="switchTab('vault')">前往金庫組隊</button>
+          </div>
+        `;
+      } else {
+        noQuestContainer.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon"><i class="fa-solid fa-circle-check" style="color: var(--primary-teal); opacity: 0.9;"></i></div>
+            <h3>任務挑戰完成！</h3>
+            <p>您已順利完成目前的 AI 任務。可接受下方「熱門商圈任務推薦」中的新任務繼續挑戰，累積更多金庫點數！</p>
+          </div>
+        `;
+      }
+      noQuestContainer.style.display = "flex";
+    }
     return;
   }
   
