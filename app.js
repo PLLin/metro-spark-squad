@@ -1506,12 +1506,45 @@ function resetDemoToInitial() {
   renderRecommendedQuests();
 
   // 重置首頁輸入值
-  document.getElementById("sim-start-station").value = "台北車站";
-  document.getElementById("sim-end-station").value = "中山";
+  const simStart = document.getElementById("sim-start-station");
+  if (simStart) simStart.value = "台北車站";
+  const simEnd = document.getElementById("sim-end-station");
+  if (simEnd) simEnd.value = "中山";
 
   // 5. 清除任務導覽紅點
   const navDot = document.getElementById("nav-quest-dot");
   if (navDot) navDot.classList.remove("active");
+
+  // 6. 重置金庫交易日誌為初始預設值
+  const logList = document.getElementById("vault-log-list");
+  if (logList) {
+    logList.innerHTML = `
+      <div class="log-item">
+        <div class="log-icon bg-light-green"><i class="fa-solid fa-train-subway text-green"></i></div>
+        <div class="log-text">
+          <strong>捷運搭乘回饋 (我)</strong>
+          <span>今天 09:12 · 板橋站 → 台北車站</span>
+        </div>
+        <div class="log-points positive">+15 pt</div>
+      </div>
+      <div class="log-item">
+        <div class="log-icon bg-light-teal"><i class="fa-solid fa-wand-magic-sparkles text-teal"></i></div>
+        <div class="log-text">
+          <strong>雙人任務完成：中山站出站 (小芸)</strong>
+          <span>昨天 20:45 · 系統核發</span>
+        </div>
+        <div class="log-points positive">+120 pt</div>
+      </div>
+      <div class="log-item">
+        <div class="log-icon bg-light-blue"><i class="fa-solid fa-location-dot text-blue"></i></div>
+        <div class="log-text">
+          <strong>綠色景點簽到：大安森林公園 (阿明)</strong>
+          <span>3 天前 · 地理圍欄自動入點</span>
+        </div>
+        <div class="log-points positive">+50 pt</div>
+      </div>
+    `;
+  }
 
   // 7. 切換到金庫分頁以重新組隊
   switchTab("vault");
