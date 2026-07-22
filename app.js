@@ -133,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const rideBtn = document.getElementById("btn-trigger-route");
           if (rideBtn) {
             rideBtn.classList.add("glowing-guide");
-            showToast("引導提示", "👉 勾選多人同行，點擊「模擬乘車出站」以解鎖第一階段站點抵達意圖！", "gold");
+            showToast("引導提示", "👉 點選同行程車隊員，點擊「模擬乘車出站」以解鎖第一階段站點抵達意圖！", "gold");
           }
         }
       }, 300);
@@ -426,6 +426,7 @@ function triggerRideSimulation() {
     switchTab('vault');
     return;
   }
+  clearAllToasts();
 
   updateIsland("正在分析通勤軌跡...", "active purple");
   showToast("捷運動態票證偵測", "系統收到捷運卡進站/出站信號...", "teal");
@@ -546,6 +547,7 @@ function triggerRideSimulation() {
  * 模擬上傳收據：AI Vision 辨識與金庫點數注入 (支持多任務參數)
  */
 function triggerReceiptSimulation(questId) {
+  clearAllToasts();
   // 如果沒有指定 ID，自動尋找目前第一個在步驟三的任務
   let targetQuestId = questId;
   if (!targetQuestId) {
@@ -826,6 +828,7 @@ function showToast(title, message, type = "teal") {
   const container = document.getElementById("toast-container");
   const toast = document.createElement("div");
   toast.className = `toast-item ${type}`;
+  toast.style.cursor = "pointer"; // 提示使用者可以點擊關閉
   
   let icon = "fa-info-circle";
   if (type === "purple") icon = "fa-wand-magic-sparkles";
@@ -834,21 +837,48 @@ function showToast(title, message, type = "teal") {
 
   toast.innerHTML = `
     <i class="fa-solid ${icon}"></i>
-    <div class="toast-body">
+    <div class="toast-body" style="flex-grow: 1;">
       <strong>${title}</strong>
       <p>${message}</p>
     </div>
+    <span class="toast-close" style="font-size: 0.8rem; margin-left: 8px; opacity: 0.6; align-self: flex-start; line-height: 1;">✕</span>
   `;
 
-  container.appendChild(toast);
-
-  // 4秒後淡出，然後移除
-  setTimeout(() => {
+  // 點擊關閉邏輯
+  const dismiss = () => {
+    if (toast.classList.contains("fade-out")) return;
     toast.classList.add("fade-out");
     setTimeout(() => {
       toast.remove();
     }, 300);
-  }, 4000);
+  };
+
+  toast.addEventListener("click", dismiss);
+  container.appendChild(toast);
+
+  // 如果不是引導提示 (gold)，則 4 秒後自動淡出；引導與防呆提示 (gold) 必須手動點擊關閉 (等他按過去再消失)
+  if (type !== "gold") {
+    setTimeout(() => {
+      dismiss();
+    }, 4000);
+  }
+}
+
+/**
+ * 清除畫面上所有的 Toast 提示
+ */
+function clearAllToasts() {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+  const toasts = container.querySelectorAll(".toast-item");
+  toasts.forEach(toast => {
+    if (!toast.classList.contains("fade-out")) {
+      toast.classList.add("fade-out");
+      setTimeout(() => {
+        toast.remove();
+      }, 300);
+    }
+  });
 }
 
 /**
@@ -1248,6 +1278,7 @@ function renderMemberList() {
         showToast("提示", "請至少勾選一位成員以組成共同團隊！", "gold");
         return;
       }
+      clearAllToasts();
       
       const selectedIndices = checkedBoxes.map(cb => parseInt(cb.value));
       
@@ -1474,6 +1505,7 @@ function showSettlementModal() {
  * 結算完成，重置 Demo 為初始狀態
  */
 function resetDemoToInitial() {
+  clearAllToasts();
   // 1. 重置數據狀態為初始未組隊狀態
   STATE.personalPoints = 5820;
   STATE.vaultPoints = 5820;
